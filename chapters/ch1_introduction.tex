@@ -1,0 +1,33 @@
+\chapter{Introduction}\label{sec:intro}
+Generative modeling has become one of the most influential areas in modern machine learning, powering applications in image synthesis, text generation, and scientific modeling. To fully understand architectures like Variational Autoencoders (VAEs), Generative Adversarial Networks (GANs), Diffusion Models, and Energy-Based Models, one requires a deep foundation in mathematics: linear algebra, probability and statistics, optimization, and stochastic processes.
+
+These notes are designed as a crash course for graduate students, blending mathematical rigor with application-driven intuition. Each concept is introduced with its historical origin, motivation for machine learning, and its formal theoretical underpinning. We assume familiarity with calculus and basic probability; all other prerequisites are developed within the text.
+
+\section{Structure of the Notes}
+These notes progress from foundational mathematics to modern generative modeling. Chapters~2--5 develop linear algebra, probability, optimization, and stochastic processes. Chapter~6 synthesizes these tools to study VAEs, GANs, diffusion models, energy-based models, autoregressive models, and normalizing flows.
+
+\section{Required Background}
+The reader should be comfortable with multivariable calculus, basic probability, and programming in a language such as Python. Knowledge of measure theory and advanced analysis is helpful but not required; essential concepts are introduced as needed.
+
+\section{Notation}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \hline
+        Symbol & Meaning \\ \hline
+        $\mathbb{R}^n$ & $n$-dimensional real vector space \\
+        $\mathbf{x}$ & column vector \emph{x} \\
+        $\|x\|_2$ & Euclidean norm of $x$ \\
+        $\nabla f$ & gradient of function $f$ \\
+        $\mathbb{E}[X]$ & expectation of random variable $X$ \\
+        $\mathrm{Var}(X)$ & variance of $X$ \\
+        $I_n$ & $n\times n$ identity matrix \\
+        $\mathcal{N}(\mu,\Sigma)$ & Gaussian with mean $\mu$ and covariance $\Sigma$ \\
+        \hline
+    \end{tabular}
+    \caption{Common notation used throughout the notes.}
+\end{table}
+
+\section{References and Further Reading}
+For a deeper exploration of the mathematics presented here, see texts such as \emph{Linear Algebra Done Right} by Axler, \emph{Probability and Measure} by Billingsley, and \emph{Convex Optimization} by Boyd and Vandenberghe. Historical notes and citations are provided in the bibliography.
+
