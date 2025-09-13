@@ -21,6 +21,34 @@ Generative modeling has become one of the most influential areas in modern machi
 
 These notes are designed as a crash course for graduate students, blending mathematical rigor with application-driven intuition. Each concept is introduced with its historical origin, motivation for machine learning, and its formal theoretical underpinning. We assume familiarity with calculus and basic probability; all other prerequisites are developed within the text.
 
+\section{Structure of the Notes}
+These notes progress from foundational mathematics to modern generative modeling. Chapters~2--5 develop linear algebra, probability, optimization, and stochastic processes. Chapter~6 synthesizes these tools to study VAEs, GANs, diffusion models, energy-based models, autoregressive models, and normalizing flows.
+
+\section{Required Background}
+The reader should be comfortable with multivariable calculus, basic probability, and programming in a language such as Python. Knowledge of measure theory and advanced analysis is helpful but not required; essential concepts are introduced as needed.
+
+\section{Notation}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \hline
+        Symbol & Meaning \\ \hline
+        $\mathbb{R}^n$ & $n$-dimensional real vector space \\
+        $\mathbf{x}$ & column vector \emph{x} \\
+        $\|x\|_2$ & Euclidean norm of $x$ \\
+        $\nabla f$ & gradient of function $f$ \\
+        $\mathbb{E}[X]$ & expectation of random variable $X$ \\
+        $\mathrm{Var}(X)$ & variance of $X$ \\
+        $I_n$ & $n\times n$ identity matrix \\
+        $\mathcal{N}(\mu,\Sigma)$ & Gaussian with mean $\mu$ and covariance $\Sigma$ \\
+        \hline
+    \end{tabular}
+    \caption{Common notation used throughout the notes.}
+\end{table}
+
+\section{References and Further Reading}
+For a deeper exploration of the mathematics presented here, see texts such as \emph{Linear Algebra Done Right} by Axler, \emph{Probability and Measure} by Billingsley, and \emph{Convex Optimization} by Boyd and Vandenberghe. Historical notes and citations are provided in the bibliography.
+
 \chapter{Linear Algebra Foundations}
 Linear algebra provides the language in which data and model parameters are represented. Understanding vector spaces, eigenvalues, and matrix factorization is essential for designing and analyzing generative models.
 
@@ -80,6 +108,22 @@ If $A\in\mathbb{R}^{n\times n}$ is symmetric, then there exists an orthogonal ma
 By induction on $n$ and the fact that symmetric matrices have real eigenvalues, one constructs an orthonormal eigenbasis using Gram--Schmidt orthogonalization.
 \end{proof}
 Principal Component Analysis (Pearson, 1901) applies the spectral theorem to the covariance matrix $\Sigma=\tfrac1m\sum_{i=1}^m x_ix_i^T$, projecting data onto leading eigenvectors to reduce dimensionality.
+
+\section{Matrix Operations and Calculus}
+\subsection{Matrix Operations}
+Matrix addition and multiplication follow the usual rules $(A+B)_{ij}=A_{ij}+B_{ij}$ and $(AB)_{ij}=\sum_k A_{ik}B_{kj}$. The trace $\operatorname{tr}(A)=\sum_i A_{ii}$ is linear and satisfies $\operatorname{tr}(AB)=\operatorname{tr}(BA)$. The Frobenius norm $\|A\|_F=\sqrt{\sum_{ij}A_{ij}^2}$ extends the Euclidean norm and is useful for measuring reconstruction error in VAEs.
+
+\subsection{Singular Value Decomposition}
+\begin{theorem}[Singular Value Decomposition]
+Any $A\in\mathbb{R}^{m\times n}$ admits a factorization $A=U\Sigma V^T$ where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal and $\Sigma$ is diagonal with nonnegative entries $\sigma_1\ge\dots\ge\sigma_r>0$. The values $\sigma_i$ are the \emph{singular values} of $A$.
+\end{theorem}
+SVD underlies low-rank approximations and is central to matrix completion and dimensionality reduction.
+
+\subsection{Matrix Calculus for Backpropagation}
+Matrix derivatives obey rules analogous to scalar calculus. For $f(X)=\operatorname{tr}(AX^T)$ we have $\nabla_X f=A$. If $f(X)=\|AX-b\|_2^2$, then $\nabla_X f=2A^T(AX-b)$. These formulas enable backpropagation through linear layers and are generalized via the chain rule to deep networks.
+
+\subsection{Tensor Notation}
+Higher-order data such as images and video require tensors. A tensor $\mathcal{T}\in\mathbb{R}^{n_1\times\cdots\times n_k}$ has entries $\mathcal{T}_{i_1\dots i_k}$. Operations like contraction generalize matrix multiplication and appear in attention mechanisms and diffusion model score networks.
 
 \chapter{Probability and Statistics Foundations}
 Probabilistic modeling underpins generative approaches by describing uncertainty and variability in data and latent variables.
@@ -157,6 +201,44 @@ Apply Jensen's inequality to the convex function $\phi(t)=t\log t$.
 For a convex function $f$ and random variable $X$, $f(\mathbb{E}[X])\le\mathbb{E}[f(X)]$.
 \end{theorem}
 This inequality is the basis for deriving the ELBO in variational inference.
+
+\section{Bayes' Theorem and Conditional Expectation}
+Bayes (1763) showed how to invert conditional probabilities:
+\begin{equation}
+\mathbb{P}(A\mid B)=\frac{\mathbb{P}(B\mid A)\mathbb{P}(A)}{\mathbb{P}(B)}.
+\end{equation}
+In terms of densities, $p(x\mid y)=p(y\mid x)p(x)/p(y)$. The conditional expectation of $X$ given a $\sigma$-algebra $\mathcal{G}$ is the unique $\mathcal{G}$-measurable random variable $\mathbb{E}[X\mid\mathcal{G}]$ satisfying $\int_G \mathbb{E}[X\mid\mathcal{G}]\, d\mathbb{P}=\int_G X\, d\mathbb{P}$ for all $G\in\mathcal{G}$. Conditional expectations generalize least-squares projections and appear in VAEs when computing expectations over latent variables.
+
+\section{Covariance and Independence}
+For random variables $X$ and $Y$, the covariance is
+\begin{equation}
+\operatorname{Cov}(X,Y)=\mathbb{E}[(X-\mathbb{E}[X])(Y-\mathbb{E}[Y])].
+\end{equation}
+If $X$ and $Y$ are independent then $\operatorname{Cov}(X,Y)=0$, but the converse need not hold. Uncorrelated Gaussian variables are independent, a property exploited in the diagonal Gaussian priors of VAEs.
+
+\section{Parameter Estimation: MLE and MAP}
+Given data $x_1,\dots,x_n$ drawn i.i.d. from $p(x\mid\theta)$, the maximum likelihood estimator (MLE) solves
+\begin{equation}
+\hat{\theta}_{\mathrm{MLE}}=\arg\max_{\theta} \prod_{i=1}^n p(x_i\mid\theta).
+\end{equation}
+With a prior $p(\theta)$, the maximum a posteriori (MAP) estimator is
+\begin{equation}
+\hat{\theta}_{\mathrm{MAP}}=\arg\max_{\theta} p(\theta\mid x_{1:n})=\arg\max_{\theta} p(\theta)\prod_{i=1}^n p(x_i\mid\theta).
+\end{equation}
+MLE and MAP provide point estimates used to initialize parameters in generative models.
+
+\section{Bayesian Inference}
+Bayesian inference updates beliefs through the posterior $p(\theta\mid x)=\frac{p(x\mid\theta)p(\theta)}{p(x)}$. Predictions marginalize over parameters: $p(x_{\text{new}}\mid x)=\int p(x_{\text{new}}\mid\theta)p(\theta\mid x)\, d\theta$. Variational inference approximates the posterior by a tractable family, leading to the ELBO optimized by VAEs.
+
+\section{Concentration Inequalities}
+Concentration bounds quantify deviations of random variables from their expectations. For independent bounded $X_i\in[a,b]$, Hoeffding (1963) proved
+\begin{equation}
+\mathbb{P}\left(\frac1n\sum_{i=1}^n X_i-\mathbb{E}[X_i]\ge t\right)\le\exp\left(-\frac{2n t^2}{(b-a)^2}\right).
+\end{equation}
+Such results justify generalization guarantees and the design of learning rates in stochastic optimization.
+
+\section{Monte Carlo Methods and MCMC}
+Monte Carlo integration approximates expectations via samples: $\mathbb{E}[f(X)]\approx\frac1N\sum_{i=1}^N f(x_i)$. When direct sampling is hard, Markov Chain Monte Carlo (MCMC) constructs a Markov chain with stationary distribution $p$. The Metropolis--Hastings algorithm proposes $x'\sim q(x'\mid x)$ and accepts with probability $\alpha=\min\{1, \frac{p(x')q(x\mid x')}{p(x)q(x'\mid x)}\}$. MCMC underlies training of EBMs where sampling from $p_\theta$ is required.
 
 \chapter{Optimization Foundations}
 Optimization provides algorithms for training generative models by minimizing or maximizing objective functions. We distinguish between deterministic algorithms, which use exact gradients, and stochastic algorithms that rely on noisy gradient estimates from data samples.
@@ -363,8 +445,45 @@ where $p$ and $q$ are mixed strategies. This establishes existence of Nash equil
 \end{theorem}
 This game-theoretic foundation underlies the design of GAN objectives.
 
+\section{Constrained Optimization}
+Many learning problems involve constraints such as norm bounds or probability simplices.
+\subsection{Lagrangian and KKT Conditions}
+Consider $\min_x f(x)$ subject to $g_i(x)\le0$ and $h_j(x)=0$. The Lagrangian is
+\begin{equation}
+\mathcal{L}(x,\lambda,\nu)=f(x)+\sum_i \lambda_i g_i(x)+\sum_j \nu_j h_j(x).
+\end{equation}
+Under suitable regularity, Karush--Kuhn--Tucker (KKT) conditions characterize optimality: primal feasibility, dual feasibility $\lambda_i\ge0$, complementary slackness $\lambda_i g_i(x)=0$, and stationarity $\nabla_x \mathcal{L}=0$.
+\subsection{Duality}
+The dual function $d(\lambda,\nu)=\inf_x \mathcal{L}(x,\lambda,\nu)$ yields a lower bound on $f^*$. Strong duality holds for convex problems satisfying Slater's condition, enabling efficient solutions via dual ascent.
+
+\section{Subgradient and Proximal Methods}
+For nonsmooth convex $f$, a subgradient $g$ satisfies $f(y)\ge f(x)+\langle g,y-x\rangle$. Subgradient descent updates $x_{k+1}=x_k-\eta_k g_k$. Proximal methods handle composite objectives $f(x)=g(x)+h(x)$ with easy proximal operator $\operatorname{prox}_{\eta h}(v)=\arg\min_x h(x)+\tfrac1{2\eta}\|x-v\|^2$, leading to algorithms like ISTA and ADMM used in sparse coding and variational formulations of diffusion models.
+
+\section{Convergence Rates}
+For convex $f$ with $L$-Lipschitz gradients, gradient descent achieves $O(1/k)$ convergence, while Nesterov acceleration attains $O(1/k^2)$. Strong convexity yields linear rates $O((1-\mu/L)^k)$. These rates guide learning rate schedules in training deep networks.
+
+\section{Variance Reduction Techniques}
+Stochastic gradients suffer from high variance. Variance-reduced methods maintain control variates.
+\subsection{SVRG \cite{johnson2013}}
+Stochastic Variance Reduced Gradient periodically computes the full gradient $\tilde{\mu}$ and uses
+\begin{equation}
+g_k=\nabla f_{i_k}(x_k)-\nabla f_{i_k}(\tilde{x})+\tilde{\mu}
+\end{equation}
+to reduce variance while retaining unbiasedness.
+\subsection{SAGA \cite{defazio2014}}
+SAGA stores gradients for each data point to construct a control variate, achieving linear convergence for strongly convex objectives.
+
+\section{Adaptive Methods: Theory}
+Adaptive algorithms like Adam modify learning rates per coordinate. Under assumptions of bounded gradients and appropriate decay parameters, convergence to stationary points can be proved for convex problems, though general nonconvex guarantees remain open. Understanding these methods informs practical training of VAEs and GANs.
+
 \chapter{Stochastic Processes and Diffusion}
 Stochastic processes model the evolution of random variables over time. Diffusion-based generative models rely heavily on concepts from Brownian motion and stochastic differential equations.
+
+\section{Overview of Stochastic Processes}
+A stochastic process $\{X_t\}_{t\ge0}$ is a collection of random variables indexed by time. Processes may be discrete- or continuous-time and can have state spaces ranging from finite sets to $\mathbb{R}^d$. Key properties include stationarity and memory. Understanding these notions prepares us for Markov models used in diffusion and autoregressive techniques.
+
+\section{Markov Chains}
+Discrete-time Markov chains satisfy $\mathbb{P}(X_{t+1}=j\mid X_t=i,\ldots)=P_{ij}$ where $P$ is a transition matrix with rows summing to one. The chain is \emph{irreducible} if every state communicates and \emph{aperiodic} if returns occur at irregular times. The stationary distribution $\pi$ solves $\pi^T P=\pi^T$. Markov chains model sampling procedures in MCMC and are discrete analogues of diffusion processes.
 
 \section{Brownian Motion}
 \subsection{Definition and Properties}
@@ -403,6 +522,34 @@ The probability density $p(x,t)$ of $X_t$ solves the Fokker--Planck equation
 \end{equation}
 which describes how densities evolve over time. Diffusion models design $f$ and $g$ to allow tractable reverse-time sampling.
 
+\section{Ornstein--Uhlenbeck Process}
+The Ornstein--Uhlenbeck (OU) process satisfies
+\begin{equation}
+dX_t = -\gamma X_t dt + \sigma dB_t,
+\end{equation}
+and has stationary distribution $\mathcal{N}(0, \sigma^2/(2\gamma))$. OU dynamics model velocity in Langevin equations and appear in continuous-time auto-regressive priors.
+
+\section{Langevin Dynamics}
+Langevin dynamics describe sampling from $p(x)\propto e^{-U(x)}$ via
+\begin{equation}
+dX_t = -\nabla U(X_t) dt + \sqrt{2} dB_t.
+\end{equation}
+Discretizing yields the unadjusted Langevin algorithm used for MCMC in EBMs. Adding momentum produces Hamiltonian Monte Carlo.
+
+\section{Time Reversal of SDEs}
+For an SDE $dX_t=f(X_t,t)dt+g(t)dB_t$ with density $p_t$, Anderson \cite{anderson1982} showed the time-reversed process satisfies
+\begin{equation}
+dX_t = \left[f(X_t,t)-g^2(t)\nabla_x \log p_t(X_t)\right]dt + g(t) d\bar{B}_t,
+\end{equation}
+where $\bar{B}_t$ is backward Brownian motion. This result underpins diffusion model sampling.
+
+\section{Girsanov's Theorem}
+Girsanov \cite{girsanov1960} provides a change-of-measure formula: if $X_t$ satisfies $dX_t = f dt + g dB_t$ and $u_t$ is adapted with $\int_0^T \|u_t\|^2 dt < \infty$, then under the new measure defined by
+\begin{equation}
+\frac{d\mathbb{Q}}{d\mathbb{P}} = \exp\left(\int_0^T u_t^T dB_t - \frac12\int_0^T \|u_t\|^2 dt\right),
+\end{equation}
+the process $\tilde{B}_t = B_t - \int_0^t u_s ds$ is Brownian. Girsanov's theorem allows incorporating drift changes and is used in score-based diffusion analyses.
+
 \chapter{Generative Models}
 We now study key generative architectures, emphasizing intuition, mathematics, and algorithms.
 
@@ -412,6 +559,14 @@ Variational Autoencoders (VAEs), introduced by Kingma and Welling (2013), combin
 
 \subsection{Mathematical Foundations}
 Given data $x\sim p_\text{data}(x)$, assume a latent variable $z$ with prior $p(z)$. The generative model is $p_\theta(x|z)$ parameterized by neural networks. Exact posterior inference $p_\theta(z|x)$ is intractable; VAEs introduce an approximate posterior $q_\phi(z|x)$.
+
+\subsection{ELBO Derivation}
+Starting from $\log p_\theta(x)=\log \int p_\theta(x,z)\, dz$ and introducing $q_\phi(z|x)$, we have
+\begin{align}
+\log p_\theta(x) &= \log \int q_\phi(z|x) \frac{p_\theta(x,z)}{q_\phi(z|x)} dz \\ 
+&\ge \int q_\phi(z|x) \log \frac{p_\theta(x,z)}{q_\phi(z|x)} dz = \mathbb{E}_{q_\phi}[\log p_\theta(x|z)] - D_{\mathrm{KL}}(q_\phi(z|x)\|p(z)),
+\end{align}
+where Jensen's inequality yields the lower bound. The gap equals $D_{\mathrm{KL}}(q_\phi(z|x)\|p_\theta(z|x))$. Thus we obtain the Evidence Lower Bound (ELBO).
 
 \begin{theorem}[Evidence Lower Bound]
 For any $q_\phi(z|x)$,
@@ -459,6 +614,13 @@ Differentiate $V(D,G)$ with respect to $D(x)$ and set to zero.
 \end{proof}
 Substituting $D^*$ yields $V(D^*,G)= -\log 4 + 2\,\text{JS}(p_{\text{data}}\|p_G)$, showing GANs minimize Jensen--Shannon divergence.
 
+\subsection{Probability Metrics}
+Beyond Jensen--Shannon divergence, other distances compare distributions. The \emph{Wasserstein-1} distance \cite{villani2003} is
+\begin{equation}
+W_1(p,q)=\inf_{\gamma\in\Pi(p,q)} \int \|x-y\| d\gamma(x,y),
+\end{equation}
+where $\Pi(p,q)$ are couplings with marginals $p$ and $q$. Wasserstein GANs replace the JS divergence with $W_1$, yielding a smoother objective linked to optimal transport. Choice of metric affects training stability and sample quality.
+
 \subsection{Algorithm}
 \begin{algorithm}
 \caption{Stochastic GAN Training}
@@ -487,6 +649,13 @@ dX_t = \left[f(X_t,t) - g^2(t)\nabla_x \log q_t(X_t)\right]dt + g(t)d\bar{B}_t,
 \end{equation}
 where $\bar{B}_t$ is Brownian motion run backward in time.
 
+\subsection{Probability Flow ODEs and Score Matching}
+The same marginal distributions arise from the deterministic probability flow ODE
+\begin{equation}
+\frac{dX_t}{dt}=f(X_t,t)-\tfrac12 g^2(t)\nabla_x \log q_t(X_t),
+\end{equation}
+which enables likelihood evaluation via the instantaneous change-of-variables formula. Score matching estimates $\nabla_x\log q_t$ without normalizing constants by minimizing $\mathbb{E}_{q_t}[\|s_\theta(x,t)-\nabla_x\log q_t(x)\|^2]$. These ideas connect diffusion models to normalizing flows and EBMs.
+
 \subsection{Algorithm (DDPM)}
 \begin{algorithm}
 \caption{Denoising Diffusion Probabilistic Model}
@@ -514,6 +683,9 @@ The log-likelihood gradient is
 \end{equation}
 The partition function $Z=\int e^{-E_\theta(x)}dx$ is typically intractable, necessitating approximate methods like Markov Chain Monte Carlo (MCMC).
 
+\subsection{MCMC and Partition Functions}
+MCMC constructs a Markov chain with stationary distribution proportional to $e^{-E_\theta(x)}$. Algorithms such as Gibbs sampling and Langevin dynamics approximate expectations in the log-likelihood gradient. The intractable partition function cancels in ratio-based methods and its gradients can be estimated by importance sampling or annealed importance sampling. Efficient sampling is crucial for scaling EBMs to high dimensions.
+
 \subsection{Contrastive Divergence}
 Hinton's contrastive divergence (2002) approximates the log-likelihood gradient using short-run MCMC chains.
 \begin{algorithm}
@@ -528,6 +700,28 @@ Hinton's contrastive divergence (2002) approximates the log-likelihood gradient 
 
 \subsection{Strengths, Limitations, and Open Questions}
 EBMs provide flexible energy shaping and can model complex dependencies but suffer from difficult normalization and sampling. Recent work explores score-based EBMs and connections to diffusion models.
+
+\section{Autoregressive Models}
+\subsection{Introduction and Motivation}
+Autoregressive models factorize densities as $p(x)=\prod_{i=1}^n p(x_i\mid x_{<i})$. Examples include PixelCNN and transformer-based language models.
+\subsection{Mathematical Details}
+Training maximizes the log-likelihood
+\begin{equation}
+\log p(x)=\sum_{i=1}^n \log p(x_i\mid x_{<i}),
+\end{equation}
+using teacher forcing to expose ground-truth prefixes. The chain rule ensures exact likelihoods and efficient sampling but limits parallel generation.
+\subsection{Connections}
+Autoregressive factorization links to normalizing flows through triangular Jacobians and forms the backbone of diffusion model parameterizations such as transformer-based denoisers.
+
+\section{Normalizing Flows}
+\subsection{Introduction and Motivation}
+Normalizing flows \cite{rezende2015} transform a simple base distribution $z\sim p_z$ into a complex $x$ via an invertible map $x=T_\theta(z)$.
+\subsection{Mathematical Foundations}
+The change-of-variables formula gives
+\begin{equation}
+\log p_\theta(x)=\log p_z(T_\theta^{-1}(x)) + \log\left|\det \frac{\partial T_\theta^{-1}}{\partial x}\right|.
+\end{equation}
+Flows enable exact likelihoods and efficient sampling when the Jacobian determinant is tractable, as in coupling layers (RealNVP) or autoregressive transforms (MADE). They connect to diffusion through continuous normalizing flows governed by probability flow ODEs.
 
 \chapter{Further Concepts}
 \begin{itemize}
@@ -566,6 +760,11 @@ EBMs provide flexible energy shaping and can model complex dependencies but suff
 \bibitem{duchi2011} J. Duchi, E. Hazan, and Y. Singer. "Adaptive subgradient methods for online learning and stochastic optimization", \emph{JMLR}, 2011.
 \bibitem{tieleman2012} T. Tieleman and G. Hinton. "Lecture 6.5 -- RMSProp: Divide the gradient by a running average of its recent magnitude", COURSERA: Neural Networks for Machine Learning, 2012.
 \bibitem{kingma2015} D. P. Kingma and J. Ba. "Adam: A method for stochastic optimization", 2015.
+\bibitem{villani2003} C. Villani. \emph{Topics in Optimal Transportation}, 2003.
+\bibitem{johnson2013} R. Johnson and T. Zhang. "Accelerating stochastic gradient descent using predictive variance reduction", \emph{NIPS}, 2013.
+\bibitem{defazio2014} A. Defazio, F. Bach, and S. Lacoste-Julien. "SAGA: A fast incremental gradient method with support for non-strongly convex composite objectives", \emph{NIPS}, 2014.
+\bibitem{anderson1982} B. D. O. Anderson. "Reverse-time diffusion equation models", \emph{Stochastics}, 1982.
+\bibitem{girsanov1960} I. V. Girsanov. "On transforming a certain class of stochastic processes by absolutely continuous substitution of measures", \emph{Theory of Probability and Its Applications}, 1960.
 \end{thebibliography}
 
 \end{document}
