@@ -1,5 +1,12 @@
 \documentclass[11pt]{book}
-\usepackage{amsmath, amssymb, amsthm, bm, graphicx, hyperref, algorithm, algorithmic}
+\usepackage{amsmath, amssymb, amsthm, bm, graphicx, hyperref, algorithm, algorithmic, mathtools, physics}
+\usepackage{tikz}
+
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{lemma}{Lemma}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{corollary}{Corollary}[chapter]
 
 \title{Mathematical Foundations for Advanced Generative Models}
 \author{Prepared for Graduate Students in Machine Learning}
@@ -12,160 +19,418 @@
 \chapter{Introduction}
 Generative modeling has become one of the most influential areas in modern machine learning, powering applications in image synthesis, text generation, and scientific modeling. To fully understand architectures like Variational Autoencoders (VAEs), Generative Adversarial Networks (GANs), Diffusion Models, and Energy-Based Models, one requires a deep foundation in mathematics: linear algebra, probability and statistics, optimization, and stochastic processes.
 
-These notes are designed as a crash course for graduate students, blending mathematical rigor with application-driven intuition. Each concept is introduced with its historical origin, motivation for machine learning, and its formal theoretical underpinning.
-
----
+These notes are designed as a crash course for graduate students, blending mathematical rigor with application-driven intuition. Each concept is introduced with its historical origin, motivation for machine learning, and its formal theoretical underpinning. We assume familiarity with calculus and basic probability; all other prerequisites are developed within the text.
 
 \chapter{Linear Algebra Foundations}
+Linear algebra provides the language in which data and model parameters are represented. Understanding vector spaces, eigenvalues, and matrix factorization is essential for designing and analyzing generative models.
 
 \section{Vector Spaces and Norms}
 \subsection{Introduction}
-A vector space is a collection of objects (vectors) that can be added and scaled. It forms the backbone of data representation in ML.
+\begin{definition}[Vector Space]
+A \emph{vector space} $V$ over a field $\mathbb{F}$ is a set equipped with two operations, vector addition and scalar multiplication, satisfying the eight axioms of associativity, commutativity, existence of identity and inverses, and distributivity. Elements of $V$ are called \emph{vectors}.
+\end{definition}
+Vector spaces form the backbone of data representation in machine learning. Typical examples include $\mathbb{R}^n$, spaces of matrices, and function spaces such as $L^2([0,1])$.
 
 \subsection{Why Needed}
-Neural networks, embeddings, and covariance matrices all rely on linear algebra. For GANs and VAEs, data lives in high-dimensional vector spaces, and understanding subspaces and projections is essential for latent representations.
+Neural networks, embeddings, and covariance matrices all rely on linear algebra. For GANs and VAEs, data lives in high-dimensional vector spaces, and understanding subspaces and projections is essential for latent representations. Many optimization algorithms exploit linear structure to compute gradients and updates efficiently.
 
 \subsection{Details and Concepts}
-Let $V$ be a vector space over $\mathbb{R}$. A basis $\{v_1, \dots, v_n\}$ spans $V$. Dimension = $n$.  
-Norms quantify vector length:
-\[
-\|x\|_p = \left(\sum_{i=1}^n |x_i|^p \right)^{1/p}.
-\]
+Let $V$ be a finite-dimensional vector space over $\mathbb{R}$ with basis $\{v_1,\dots,v_n\}$. Every $x\in V$ can be uniquely expressed as $x=\sum_{i=1}^n x_i v_i$. The \emph{dimension} of $V$ is $n$.
+
+\begin{definition}[Norm]
+A \emph{norm} on $V$ is a function $\|\cdot\|:V\to[0,\infty)$ such that for all $x,y\in V$ and $\alpha\in\mathbb{R}$:
+\begin{enumerate}
+    \item $\|x\|=0$ iff $x=0$,
+    \item $\|\alpha x\|=|\alpha|\,\|x\|$,
+    \item $\|x+y\|\le \|x\|+\|y\|$ (triangle inequality).
+\end{enumerate}
+\end{definition}
+Important norms on $\mathbb{R}^n$ include the $\ell_p$ norms
+\begin{equation}
+\|x\|_p = \left(\sum_{i=1}^n |x_i|^p\right)^{1/p},\qquad 1\le p<\infty,
+\end{equation}
+and the $\ell_\infty$ norm $\|x\|_\infty=\max_i|x_i|$. Norms induce metrics and topologies, providing notions of distance and convergence essential for analyzing algorithms.
 
 \subsection{Theorems and Contributions}
-- \textbf{Cauchy–Schwarz inequality} (Cauchy 1821, Schwarz 1888):
-\[
-|\langle x, y \rangle| \leq \|x\|_2 \|y\|_2.
-\]
-This inequality underlies correlation measures and is crucial for bounding errors in ML.
-
----
+\begin{theorem}[Cauchy--Schwarz Inequality \cite{cauchy1821,schwarz1888}]
+For any $x,y\in\mathbb{R}^n$,
+\begin{equation}
+|\langle x,y\rangle|\le \|x\|_2\,\|y\|_2.
+\end{equation}
+\end{theorem}
+\begin{proof}
+Consider the nonnegative quadratic $q(t)=\|x-ty\|_2^2=\langle x-ty,x-ty\rangle$. Expanding yields $q(t)=\|x\|_2^2-2t\langle x,y\rangle+t^2\|y\|_2^2$. The discriminant must be nonpositive, giving $4\langle x,y\rangle^2-4\|x\|_2^2\|y\|_2^2\le0$.
+\end{proof}
+This inequality underlies correlation measures and is crucial for bounding errors in machine learning algorithms. Equality holds if and only if $x$ and $y$ are linearly dependent.
 
 \section{Eigenvalues and Eigenvectors}
 \subsection{Introduction}
-Eigenvalues describe how linear transformations scale vectors; eigenvectors describe invariant directions.
+Let $A\in\mathbb{R}^{n\times n}$. A nonzero vector $v\in\mathbb{R}^n$ is an \emph{eigenvector} of $A$ with associated \emph{eigenvalue} $\lambda$ if $Av=\lambda v$. Eigenvalues describe how linear transformations scale vectors, and eigenvectors describe invariant directions.
 
 \subsection{Why Needed}
-In VAEs, covariance matrices of Gaussian priors use eigen-decompositions. In GAN stability, eigenvalue analysis explains training oscillations. In diffusion, spectral analysis governs smoothing.
+In VAEs, covariance matrices of Gaussian priors use eigen-decompositions. In GAN stability, eigenvalue analysis explains training oscillations. In diffusion modeling, spectral analysis governs smoothing operations and the behavior of Laplacians on graphs or continuous domains.
 
 \subsection{Mathematical Details}
-For $A \in \mathbb{R}^{n\times n}$, $Av = \lambda v$.  
-Spectral theorem: if $A$ is symmetric, $A = Q \Lambda Q^T$.
+The eigenvalues of $A$ are roots of its characteristic polynomial $p_A(\lambda)=\det(A-\lambda I)$. For diagonalizable matrices we have the factorization $A=V\Lambda V^{-1}$, where $\Lambda$ is diagonal. If $A$ is symmetric, the following fundamental result applies.
 
-\subsection{Theorems and Contributions}
-- \textbf{Spectral Theorem} (19th century, Fourier and later formalized by Hilbert): every symmetric matrix has real eigenvalues and orthogonal eigenvectors.  
-- Applications: PCA (Pearson, 1901) uses eigen decomposition of covariance to reduce dimensionality.
-
----
+\begin{theorem}[Spectral Theorem \cite{hilbert1904}]
+If $A\in\mathbb{R}^{n\times n}$ is symmetric, then there exists an orthogonal matrix $Q$ and a diagonal matrix $\Lambda$ such that $A=Q\Lambda Q^T$. The diagonal entries of $\Lambda$ are the real eigenvalues of $A$, and the columns of $Q$ form an orthonormal basis of eigenvectors.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+By induction on $n$ and the fact that symmetric matrices have real eigenvalues, one constructs an orthonormal eigenbasis using Gram--Schmidt orthogonalization.
+\end{proof}
+Principal Component Analysis (Pearson, 1901) applies the spectral theorem to the covariance matrix $\Sigma=\tfrac1m\sum_{i=1}^m x_ix_i^T$, projecting data onto leading eigenvectors to reduce dimensionality.
 
 \chapter{Probability and Statistics Foundations}
+Probabilistic modeling underpins generative approaches by describing uncertainty and variability in data and latent variables.
 
 \section{Random Variables and Distributions}
 \subsection{Introduction}
-A random variable assigns numbers to outcomes of an experiment.
+A \emph{random variable} $X$ on a probability space $(\Omega,\mathcal{F},\mathbb{P})$ is a measurable function $X:\Omega\to\mathbb{R}$ assigning numerical values to outcomes of an experiment.
 
 \subsection{Why Needed}
-VAEs assume latent variables $z$ with Gaussian priors. GANs use sampling from distributions. Diffusion models explicitly define forward stochastic processes.
+VAEs assume latent variables $z$ with Gaussian priors; GANs generate samples from latent distributions; diffusion models explicitly define forward stochastic processes and require understanding of conditional distributions and Markov chains.
 
 \subsection{Details}
-Discrete: PMF $P(X=x)$, continuous: PDF $p(x)$ with $\int p(x)dx=1$.  
-Expectation: $\mathbb{E}[X] = \int x p(x) dx$.  
-Variance: $\mathrm{Var}(X) = \mathbb{E}[(X-\mu)^2]$.
+A discrete random variable has a probability mass function (PMF) $P(X=x)$ with $\sum_x P(X=x)=1$. A continuous random variable has a probability density function (PDF) $p(x)$ such that $\int_{\mathbb{R}} p(x)\,dx=1$.
+
+The expectation of a function $g$ under $p$ is $\mathbb{E}[g(X)]=\int g(x)p(x)\,dx$. The variance is $\operatorname{Var}(X)=\mathbb{E}[(X-\mu)^2]$, where $\mu=\mathbb{E}[X]$.
+
+Two random variables $X$ and $Y$ are \emph{independent} if $p_{XY}(x,y)=p_X(x)p_Y(y)$ for all $(x,y)$. Independence often simplifies modeling and allows factorization of joint distributions.
 
 \subsection{Theorems and Contributions}
-- \textbf{Law of Large Numbers} (Jakob Bernoulli, 1713): sample averages converge to expectation.  
-- \textbf{Central Limit Theorem} (Laplace, 1812; Lyapunov, 1901): properly normalized sums converge to Gaussian.
+\begin{theorem}[Law of Large Numbers \cite{bernoulli1713}]
+Let $\{X_i\}$ be i.i.d. with mean $\mu$. Then the sample mean $\bar{X}_n=\frac1n\sum_{i=1}^n X_i$ satisfies $\bar{X}_n\to\mu$ almost surely as $n\to\infty$.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+Apply Kolmogorov's strong law for i.i.d. variables with finite variance.
+\end{proof}
 
----
+\begin{theorem}[Central Limit Theorem \cite{laplace1812,lyapunov1901}]
+Let $\{X_i\}$ be i.i.d. with mean $\mu$ and variance $\sigma^2<\infty$. Then
+\begin{equation}
+\frac{\sum_{i=1}^n X_i - n\mu}{\sigma\sqrt{n}} \xrightarrow{d} \mathcal{N}(0,1).
+\end{equation}
+\end{theorem}
+This explains the prevalence of Gaussian assumptions in generative modeling.
 
 \section{Information Theory}
 \subsection{Introduction}
-Quantifies uncertainty and divergence between distributions.
+Information theory quantifies uncertainty and divergence between distributions. It was initiated by Shannon in 1948 and underlies loss functions used in generative modeling.
 
 \subsection{Why Needed}
-VAEs use KL divergence in ELBO. GANs can be interpreted via Jensen–Shannon divergence. Diffusion models rely on score functions linked to Fisher information.
+VAEs employ Kullback--Leibler (KL) divergence in the Evidence Lower Bound (ELBO). GANs can be interpreted via Jensen--Shannon divergence. Diffusion models rely on score functions linked to Fisher information.
 
 \subsection{Details}
-Entropy: $H(X) = -\mathbb{E}[\log p(X)]$.  
-KL divergence:
-\[
-D_{\mathrm{KL}}(p\|q) = \int p(x)\log\frac{p(x)}{q(x)}dx.
-\]
+\begin{definition}[Entropy]
+For a discrete random variable $X$ with PMF $p(x)$, the Shannon entropy is
+\begin{equation}
+H(X) = -\sum_x p(x)\log p(x).
+\end{equation}
+\end{definition}
+
+For continuous $X$, the differential entropy is $h(X)=-\int p(x)\log p(x)\,dx$. The cross-entropy between $p$ and $q$ is $H(p,q)=-\int p(x)\log q(x)\,dx$.
+
+\begin{definition}[Kullback--Leibler Divergence \cite{kullback1951}]
+The KL divergence from $p$ to $q$ is
+\begin{equation}
+D_{\mathrm{KL}}(p\|q) = \int p(x) \log \frac{p(x)}{q(x)}\, dx.
+\end{equation}
+\end{definition}
+KL divergence is nonnegative and equals zero if and only if $p=q$ almost everywhere.
+
+Mutual information between random variables $X$ and $Y$ is
+\begin{equation}
+I(X;Y)=D_{\mathrm{KL}}(p_{XY}\|p_X p_Y)=H(X)+H(Y)-H(X,Y),
+\end{equation}
+measuring the reduction in uncertainty of one variable given the other.
 
 \subsection{Theorems and Contributions}
-- \textbf{Gibbs inequality} (Gibbs 1873, formalized by Shannon 1948): KL divergence $\geq 0$.  
-- \textbf{Jensen’s inequality} (Jensen 1906): basis for deriving ELBO.  
+\begin{theorem}[Gibbs' Inequality \cite{gibbs1873,shannon1948}]
+For distributions $p$ and $q$, $D_{\mathrm{KL}}(p\|q)\ge0$ with equality iff $p=q$ a.e.
+\end{theorem}
+\begin{proof}
+Apply Jensen's inequality to the convex function $\phi(t)=t\log t$.
+\end{proof}
 
----
+\begin{theorem}[Jensen's Inequality \cite{jensen1906}]
+For a convex function $f$ and random variable $X$, $f(\mathbb{E}[X])\le\mathbb{E}[f(X)]$.
+\end{theorem}
+This inequality is the basis for deriving the ELBO in variational inference.
 
 \chapter{Optimization Foundations}
+Optimization provides algorithms for training generative models by minimizing or maximizing objective functions.
 
 \section{Gradient Descent}
 \subsection{Introduction}
-Method to minimize functions iteratively using gradients.
+Gradient descent iteratively updates parameters in the direction of steepest descent to minimize a differentiable function.
 
 \subsection{Why Needed}
-VAEs optimize ELBO; GANs solve min-max games; diffusion models optimize denoising objectives.
+VAEs optimize the ELBO; GANs solve min--max games using gradient-based updates; diffusion models optimize denoising objectives. Understanding convergence guarantees informs learning rate schedules and regularization.
 
 \subsection{Details}
-Update rule:
-\[
+Given a differentiable function $f: \mathbb{R}^n \to \mathbb{R}$, gradient descent with step size $\eta>0$ updates
+\begin{equation}
 x_{k+1} = x_k - \eta \nabla f(x_k).
-\]
-Convergence requires $\eta < 2/L$ for $L$-smooth functions.
+\end{equation}
+
+\begin{algorithm}
+\caption{Gradient Descent}
+\begin{algorithmic}[1]
+\STATE Initialize $x_0$
+\FOR{$k=0,1,2,\dots$}
+    \STATE $x_{k+1}=x_k-\eta\nabla f(x_k)$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Theorems and Contributions}
-- \textbf{Gradient method convergence} (Cauchy 1847): guarantees descent if step size chosen properly.  
-- \textbf{Convex optimization theory} (Rockafellar 1970): provided formal framework used in ML training guarantees.
+\begin{theorem}[Convergence for $L$-Smooth Convex Functions \cite{cauchy1847,rockafellar1970}]
+Suppose $f$ is convex and has $L$-Lipschitz gradient. If $0<\eta<2/L$, then gradient descent satisfies
+\begin{equation}
+f(x_k)-f(x^*)\le\frac{\|x_0-x^*\|_2^2}{2\eta k},
+\end{equation}
+where $x^*$ is a minimizer of $f$.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+Convexity implies $f(x_{k+1})\le f(x_k)+\langle\nabla f(x_k),x_{k+1}-x_k\rangle+\tfrac{L}{2}\|x_{k+1}-x_k\|^2$. Substituting the update and telescoping yields the bound.
+\end{proof}
 
----
-
-\section{Min-Max Optimization}
+\section{Min--Max Optimization}
 \subsection{Introduction}
-Problems where one agent minimizes while another maximizes.
+Min--max problems involve two agents with opposing objectives. Formally, one seeks
+\begin{equation}
+\min_{\theta} \max_{\phi} L(\theta,\phi).
+\end{equation}
 
 \subsection{Why Needed}
-GANs are precisely a min-max optimization: generator vs discriminator.
+GANs cast generative modeling as an adversarial game between a generator $G$ and discriminator $D$. Training corresponds to finding a saddle point of the loss landscape.
 
 \subsection{Details}
-\[
-\min_G \max_D L(G,D).
-\]
-A saddle point $(G^*, D^*)$ is a Nash equilibrium.
+A pair $(\theta^*,\phi^*)$ is a \emph{saddle point} if
+\begin{equation}
+L(\theta^*,\phi)\le L(\theta^*,\phi^*)\le L(\theta,\phi^*)\quad\forall\theta,\phi.
+\end{equation}
+Gradient descent-ascent methods update $\theta$ via descent on $L$ and $\phi$ via ascent.
+
+\begin{algorithm}
+\caption{Gradient Descent--Ascent}
+\begin{algorithmic}[1]
+\STATE Initialize $\theta_0, \phi_0$
+\FOR{$k=0,1,2,\dots$}
+    \STATE $\theta_{k+1}=\theta_k-\eta_\theta\nabla_{\theta}L(\theta_k,\phi_k)$
+    \STATE $\phi_{k+1}=\phi_k+\eta_\phi\nabla_{\phi}L(\theta_k,\phi_k)$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Theorems and Contributions}
-- \textbf{von Neumann’s Minimax Theorem} (1928): in zero-sum games, $\min \max = \max \min$.  
-GANs inherit this game-theoretic foundation.
-
----
+\begin{theorem}[von Neumann's Minimax Theorem \cite{vonneumann1928}]
+For a finite zero-sum game with payoff matrix $A$, the value of the game satisfies
+\begin{equation}
+\min_{p}\max_{q} p^T A q = \max_{q}\min_{p} p^T A q,
+\end{equation}
+where $p$ and $q$ are mixed strategies. This establishes existence of Nash equilibria.
+\end{theorem}
+This game-theoretic foundation underlies the design of GAN objectives.
 
 \chapter{Stochastic Processes and Diffusion}
-(Expanded with Brownian motion, Itô calculus, Fokker–Planck — same structure: intro, why, math, theorems.)
+Stochastic processes model the evolution of random variables over time. Diffusion-based generative models rely heavily on concepts from Brownian motion and stochastic differential equations.
 
----
+\section{Brownian Motion}
+\subsection{Definition and Properties}
+\begin{definition}[Brownian Motion]
+A stochastic process $\{B_t\}_{t\ge0}$ is Brownian motion if $B_0=0$, it has independent increments, $B_{t+s}-B_s\sim\mathcal{N}(0,t)$, and paths are almost surely continuous.
+\end{definition}
+Brownian motion, first observed by Robert Brown (1827) and mathematically formalized by Wiener (1923), is the canonical continuous-time stochastic process.
+
+\subsection{Why Needed}
+Diffusion models construct forward processes by adding Gaussian noise resembling Brownian motion. Understanding its properties allows connection to partial differential equations that describe density evolution.
+
+\section{Itô Calculus}
+\subsection{Stochastic Integrals}
+For a stochastic process $X_t$ adapted to the filtration of $B_t$, the Itô integral is defined as the mean-square limit
+\begin{equation}
+\int_0^T X_t \, dB_t = \lim_{n\to\infty} \sum_{k=0}^{n-1} X_{t_k} (B_{t_{k+1}}-B_{t_k}).
+\end{equation}
+
+\subsection{Itô's Formula}
+\begin{theorem}[Itô's Formula \cite{ito1944}]
+If $X_t$ satisfies $dX_t=\mu(t,X_t)dt+\sigma(t,X_t)dB_t$ and $f\in C^{2}$, then
+\begin{equation}
+df(X_t) = \left(\frac{\partial f}{\partial t}+\mu\frac{\partial f}{\partial x}+\frac{1}{2}\sigma^2\frac{\partial^2 f}{\partial x^2}\right)dt + \sigma\frac{\partial f}{\partial x} dB_t.
+\end{equation}
+\end{theorem}
+Itô calculus is indispensable for deriving diffusion and score-based models.
+
+\section{Fokker--Planck Equation}
+Let $X_t$ satisfy the stochastic differential equation (SDE)
+\begin{equation}
+dX_t = f(X_t,t) dt + g(X_t,t) dB_t.
+\end{equation}
+The probability density $p(x,t)$ of $X_t$ solves the Fokker--Planck equation
+\begin{equation}
+\frac{\partial p}{\partial t} = -\nabla_x\cdot (f p) + \frac{1}{2}\nabla_x^2:(gg^T p),
+\end{equation}
+which describes how densities evolve over time. Diffusion models design $f$ and $g$ to allow tractable reverse-time sampling.
 
 \chapter{Generative Models}
-\section{Variational Autoencoders}
-(ELBO derivation, Kingma \& Welling 2013; reparam trick)
+We now study key generative architectures, emphasizing intuition, mathematics, and algorithms.
 
-\section{GANs}
-(Goodfellow 2014; adversarial game; Jensen–Shannon divergence link)
+\section{Variational Autoencoders}
+\subsection{Introduction and Motivation}
+Variational Autoencoders (VAEs), introduced by Kingma and Welling (2013), combine deep learning with variational inference to learn latent-variable models. VAEs maximize a lower bound on the log-likelihood of data.
+
+\subsection{Mathematical Foundations}
+Given data $x\sim p_\text{data}(x)$, assume a latent variable $z$ with prior $p(z)$. The generative model is $p_\theta(x|z)$ parameterized by neural networks. Exact posterior inference $p_\theta(z|x)$ is intractable; VAEs introduce an approximate posterior $q_\phi(z|x)$.
+
+\begin{theorem}[Evidence Lower Bound]
+For any $q_\phi(z|x)$,
+\begin{align}
+\log p_\theta(x) &= D_{\mathrm{KL}}(q_\phi(z|x)\|p_\theta(z|x)) + \mathbb{E}_{q_\phi} [\log p_\theta(x,z) - \log q_\phi(z|x)] \\
+&\ge \mathbb{E}_{q_\phi} [\log p_\theta(x|z)] - D_{\mathrm{KL}}(q_\phi(z|x)\|p(z)) =: \mathcal{L}_{\text{ELBO}}(\theta,\phi).
+\end{align}
+\end{theorem}
+\begin{proof}
+Rearrange the definition of KL divergence $D_{\mathrm{KL}}(q\|p)\ge0$.
+\end{proof}
+
+To optimize the ELBO, one samples $z$ from $q_\phi(z|x)$ using the \emph{reparameterization trick}: for $q_\phi(z|x)=\mathcal{N}(\mu_\phi(x),\Sigma_\phi(x))$, write $z=\mu_\phi(x)+\Sigma_\phi^{1/2}(x)\epsilon$ with $\epsilon\sim\mathcal{N}(0,I)$.
+
+\begin{algorithm}
+\caption{VAE Training}
+\begin{algorithmic}[1]
+\FOR{each mini-batch $\{x_i\}$}
+    \STATE Sample $\epsilon_i\sim\mathcal{N}(0,I)$
+    \STATE Set $z_i=\mu_\phi(x_i)+\Sigma_\phi^{1/2}(x_i)\epsilon_i$
+    \STATE Compute loss $\mathcal{L}_{\text{ELBO}}$
+    \STATE Update $\theta,\phi$ via gradient ascent
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+VAEs provide principled density estimation with efficient inference but often produce blurry samples due to the Gaussian likelihood assumption. Research directions include richer posteriors, hierarchical VAEs, and combining VAEs with flows or diffusion models.
+
+\section{Generative Adversarial Networks}
+\subsection{Introduction and Motivation}
+Generative Adversarial Networks (GANs) were proposed by Goodfellow et al. (2014). A generator network $G$ maps latent noise $z\sim p(z)$ to data space, while a discriminator $D$ attempts to distinguish real samples from generated ones.
+
+\subsection{Mathematical Foundations}
+The classic GAN objective is
+\begin{equation}
+\min_G \max_D V(D,G) = \mathbb{E}_{x\sim p_{\text{data}}} [\log D(x)] + \mathbb{E}_{z\sim p(z)} [\log(1-D(G(z)))].
+\end{equation}
+
+\begin{theorem}[Optimal Discriminator \cite{goodfellow2014}]
+For fixed $G$, the optimal discriminator is $D^*(x)=\frac{p_{\text{data}}(x)}{p_{\text{data}}(x)+p_G(x)}$.
+\end{theorem}
+\begin{proof}
+Differentiate $V(D,G)$ with respect to $D(x)$ and set to zero.
+\end{proof}
+Substituting $D^*$ yields $V(D^*,G)= -\log 4 + 2\,\text{JS}(p_{\text{data}}\|p_G)$, showing GANs minimize Jensen--Shannon divergence.
+
+\subsection{Algorithm}
+\begin{algorithm}
+\caption{Stochastic GAN Training}
+\begin{algorithmic}[1]
+\FOR{each step}
+    \STATE Sample $\{x_i\}\sim p_{\text{data}}$, $\{z_i\}\sim p(z)$
+    \STATE Update discriminator by ascending $\nabla_D$ of objective
+    \STATE Update generator by descending $\nabla_G$ of objective
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+GANs generate sharp images but suffer from training instability and mode collapse. Research explores Wasserstein GANs, regularization, and alternative divergences. Understanding dynamics of adversarial optimization remains open.
 
 \section{Diffusion Models}
-(Sohl-Dickstein 2015; Ho et al. 2020; forward noising, reverse denoising)
+\subsection{Introduction and Motivation}
+Diffusion models, beginning with Sohl-Dickstein et al. (2015) and popularized by Ho et al. (2020), generate samples by reversing a gradual noising process described by an SDE or Markov chain.
+
+\subsection{Mathematical Foundations}
+Consider a forward process $q(x_t|x_{t-1})=\mathcal{N}(\sqrt{1-\beta_t}x_{t-1},\beta_t I)$ adding Gaussian noise. As $t\to T$, $x_T$ approaches an isotropic Gaussian. The reverse process is parameterized by a neural network that predicts the score $\nabla_x \log q(x_t)$.
+
+Using results from score matching \cite{hyvarinen2005} and Fokker--Planck theory, the reverse SDE can be written as
+\begin{equation}
+dX_t = \left[f(X_t,t) - g^2(t)\nabla_x \log q_t(X_t)\right]dt + g(t)d\bar{B}_t,
+\end{equation}
+where $\bar{B}_t$ is Brownian motion run backward in time.
+
+\subsection{Algorithm (DDPM)}
+\begin{algorithm}
+\caption{Denoising Diffusion Probabilistic Model}
+\begin{algorithmic}[1]
+\FOR{$t=T,\dots,1$}
+    \STATE Predict noise $\epsilon_\theta(x_t,t)$
+    \STATE Compute mean $\mu_t=\frac{1}{\sqrt{1-\beta_t}}(x_t-\frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}}\epsilon_\theta)$
+    \STATE Sample $x_{t-1}\sim\mathcal{N}(\mu_t,\sigma_t^2 I)$
+\ENDFOR
+\RETURN $x_0$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+Diffusion models achieve state-of-the-art sample quality and likelihoods but are computationally expensive due to long sampling chains. Active research investigates faster samplers, theoretical understanding of score estimation, and connections to ODE-based flows.
 
 \section{Energy-Based Models}
-(Lecun 2006; Boltzmann machines; contrastive divergence, Hinton 2002)
+\subsection{Introduction and Motivation}
+Energy-Based Models (EBMs) assign an unnormalized energy $E_\theta(x)$ to each configuration $x$, defining $p_\theta(x)=Z^{-1}\exp(-E_\theta(x))$. Learning seeks low energy for data and high energy elsewhere. Early examples include the Boltzmann machine (Ackley et al., 1985).
 
----
+\subsection{Mathematical Foundations}
+The log-likelihood gradient is
+\begin{equation}
+\nabla_\theta \log p_\theta(x)= -\nabla_\theta E_\theta(x)+\mathbb{E}_{p_\theta}[\nabla_\theta E_\theta(X)].
+\end{equation}
+The partition function $Z=\int e^{-E_\theta(x)}dx$ is typically intractable, necessitating approximate methods like Markov Chain Monte Carlo (MCMC).
+
+\subsection{Contrastive Divergence}
+Hinton's contrastive divergence (2002) approximates the log-likelihood gradient using short-run MCMC chains.
+\begin{algorithm}
+\caption{Contrastive Divergence-$k$}
+\begin{algorithmic}[1]
+\FOR{each data point $x$}
+    \STATE Run $k$ steps of MCMC starting at $x$ to obtain $\tilde{x}$
+    \STATE Update $\theta$ by $\nabla_\theta E_\theta(x)-\nabla_\theta E_\theta(\tilde{x})$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+EBMs provide flexible energy shaping and can model complex dependencies but suffer from difficult normalization and sampling. Recent work explores score-based EBMs and connections to diffusion models.
 
 \chapter{Further Concepts}
-- Normalizing Flows (Rezende \& Mohamed, 2015)  
-- Score Matching (Hyvärinen, 2005)  
-- Stein Variational Gradient Descent (Liu \& Wang, 2016)  
-- Connections to RL and physics  
+\begin{itemize}
+    \item \textbf{Normalizing Flows} \cite{rezende2015}: invertible transformations with tractable Jacobian determinants enabling exact likelihood evaluation.
+    \item \textbf{Score Matching} \cite{hyvarinen2005}: estimators based on matching gradients of log densities, foundational for diffusion models and EBMs.
+    \item \textbf{Stein Variational Gradient Descent} \cite{liu2016}: particle-based variational inference using Stein's identity.
+    \item \textbf{Connections to Reinforcement Learning and Physics}: generative models relate to control problems, statistical mechanics, and thermodynamics, offering a rich interdisciplinary research area.
+\end{itemize}
 
----
+\bibliographystyle{plain}
+\begin{thebibliography}{99}
+\bibitem{cauchy1821} A.-L. Cauchy. \emph{Cours d'Analyse}, 1821.
+\bibitem{schwarz1888} H. A. Schwarz. \emph{Gesammelte Mathematische Abhandlungen}, 1888.
+\bibitem{hilbert1904} D. Hilbert. \emph{Grundzüge einer Allgemeinen Theorie der Linearen Integralgleichungen}, 1904.
+\bibitem{bernoulli1713} J. Bernoulli. \emph{Ars Conjectandi}, 1713.
+\bibitem{laplace1812} P.-S. Laplace. \emph{Théorie Analytique des Probabilités}, 1812.
+\bibitem{lyapunov1901} A. Lyapunov. "Uber den zentralen Grenzwertsatz der Wahrscheinlichkeitsrechnung", 1901.
+\bibitem{kullback1951} S. Kullback and R. A. Leibler. "On information and sufficiency", \emph{Ann. Math. Statist.}, 1951.
+\bibitem{gibbs1873} J. W. Gibbs. \emph{A Method of Geometrical Representation of Thermodynamic Properties}, 1873.
+\bibitem{shannon1948} C. E. Shannon. "A mathematical theory of communication", \emph{Bell System Technical Journal}, 1948.
+\bibitem{jensen1906} J. L. W. V. Jensen. "Sur les fonctions convexes", \emph{Acta Mathematica}, 1906.
+\bibitem{cauchy1847} A.-L. Cauchy. "Méthode générale pour la résolution des systèmes d'équations simultanées", 1847.
+\bibitem{rockafellar1970} R. T. Rockafellar. \emph{Convex Analysis}, 1970.
+\bibitem{vonneumann1928} J. von Neumann. "Zur Theorie der Gesellschaftsspiele", 1928.
+\bibitem{ito1944} K. Itô. "Stochastic integral", \emph{Proc. Imp. Acad. Tokyo}, 1944.
+\bibitem{hyvarinen2005} A. Hyvärinen. "Estimation of non-normalized statistical models by score matching", \emph{JMLR}, 2005.
+\bibitem{kingma2013} D. P. Kingma and M. Welling. "Auto-encoding variational Bayes", 2013.
+\bibitem{goodfellow2014} I. Goodfellow et al. "Generative adversarial nets", 2014.
+\bibitem{sohldickstein2015} J. Sohl-Dickstein et al. "Deep unsupervised learning using nonequilibrium thermodynamics", 2015.
+\bibitem{ho2020} J. Ho et al. "Denoising diffusion probabilistic models", 2020.
+\bibitem{rezende2015} D. J. Rezende and S. Mohamed. "Variational inference with normalizing flows", 2015.
+\bibitem{liu2016} Q. Liu and D. Wang. "Stein variational gradient descent", 2016.
+\end{thebibliography}
 
 \end{document}
-
