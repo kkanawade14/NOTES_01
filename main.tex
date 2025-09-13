@@ -1,0 +1,171 @@
+\documentclass[11pt]{book}
+\usepackage{amsmath, amssymb, amsthm, bm, graphicx, hyperref, algorithm, algorithmic}
+
+\title{Mathematical Foundations for Advanced Generative Models}
+\author{Prepared for Graduate Students in Machine Learning}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+Generative modeling has become one of the most influential areas in modern machine learning, powering applications in image synthesis, text generation, and scientific modeling. To fully understand architectures like Variational Autoencoders (VAEs), Generative Adversarial Networks (GANs), Diffusion Models, and Energy-Based Models, one requires a deep foundation in mathematics: linear algebra, probability and statistics, optimization, and stochastic processes.
+
+These notes are designed as a crash course for graduate students, blending mathematical rigor with application-driven intuition. Each concept is introduced with its historical origin, motivation for machine learning, and its formal theoretical underpinning.
+
+---
+
+\chapter{Linear Algebra Foundations}
+
+\section{Vector Spaces and Norms}
+\subsection{Introduction}
+A vector space is a collection of objects (vectors) that can be added and scaled. It forms the backbone of data representation in ML.
+
+\subsection{Why Needed}
+Neural networks, embeddings, and covariance matrices all rely on linear algebra. For GANs and VAEs, data lives in high-dimensional vector spaces, and understanding subspaces and projections is essential for latent representations.
+
+\subsection{Details and Concepts}
+Let $V$ be a vector space over $\mathbb{R}$. A basis $\{v_1, \dots, v_n\}$ spans $V$. Dimension = $n$.  
+Norms quantify vector length:
+\[
+\|x\|_p = \left(\sum_{i=1}^n |x_i|^p \right)^{1/p}.
+\]
+
+\subsection{Theorems and Contributions}
+- \textbf{Cauchy–Schwarz inequality} (Cauchy 1821, Schwarz 1888):
+\[
+|\langle x, y \rangle| \leq \|x\|_2 \|y\|_2.
+\]
+This inequality underlies correlation measures and is crucial for bounding errors in ML.
+
+---
+
+\section{Eigenvalues and Eigenvectors}
+\subsection{Introduction}
+Eigenvalues describe how linear transformations scale vectors; eigenvectors describe invariant directions.
+
+\subsection{Why Needed}
+In VAEs, covariance matrices of Gaussian priors use eigen-decompositions. In GAN stability, eigenvalue analysis explains training oscillations. In diffusion, spectral analysis governs smoothing.
+
+\subsection{Mathematical Details}
+For $A \in \mathbb{R}^{n\times n}$, $Av = \lambda v$.  
+Spectral theorem: if $A$ is symmetric, $A = Q \Lambda Q^T$.
+
+\subsection{Theorems and Contributions}
+- \textbf{Spectral Theorem} (19th century, Fourier and later formalized by Hilbert): every symmetric matrix has real eigenvalues and orthogonal eigenvectors.  
+- Applications: PCA (Pearson, 1901) uses eigen decomposition of covariance to reduce dimensionality.
+
+---
+
+\chapter{Probability and Statistics Foundations}
+
+\section{Random Variables and Distributions}
+\subsection{Introduction}
+A random variable assigns numbers to outcomes of an experiment.
+
+\subsection{Why Needed}
+VAEs assume latent variables $z$ with Gaussian priors. GANs use sampling from distributions. Diffusion models explicitly define forward stochastic processes.
+
+\subsection{Details}
+Discrete: PMF $P(X=x)$, continuous: PDF $p(x)$ with $\int p(x)dx=1$.  
+Expectation: $\mathbb{E}[X] = \int x p(x) dx$.  
+Variance: $\mathrm{Var}(X) = \mathbb{E}[(X-\mu)^2]$.
+
+\subsection{Theorems and Contributions}
+- \textbf{Law of Large Numbers} (Jakob Bernoulli, 1713): sample averages converge to expectation.  
+- \textbf{Central Limit Theorem} (Laplace, 1812; Lyapunov, 1901): properly normalized sums converge to Gaussian.
+
+---
+
+\section{Information Theory}
+\subsection{Introduction}
+Quantifies uncertainty and divergence between distributions.
+
+\subsection{Why Needed}
+VAEs use KL divergence in ELBO. GANs can be interpreted via Jensen–Shannon divergence. Diffusion models rely on score functions linked to Fisher information.
+
+\subsection{Details}
+Entropy: $H(X) = -\mathbb{E}[\log p(X)]$.  
+KL divergence:
+\[
+D_{\mathrm{KL}}(p\|q) = \int p(x)\log\frac{p(x)}{q(x)}dx.
+\]
+
+\subsection{Theorems and Contributions}
+- \textbf{Gibbs inequality} (Gibbs 1873, formalized by Shannon 1948): KL divergence $\geq 0$.  
+- \textbf{Jensen’s inequality} (Jensen 1906): basis for deriving ELBO.  
+
+---
+
+\chapter{Optimization Foundations}
+
+\section{Gradient Descent}
+\subsection{Introduction}
+Method to minimize functions iteratively using gradients.
+
+\subsection{Why Needed}
+VAEs optimize ELBO; GANs solve min-max games; diffusion models optimize denoising objectives.
+
+\subsection{Details}
+Update rule:
+\[
+x_{k+1} = x_k - \eta \nabla f(x_k).
+\]
+Convergence requires $\eta < 2/L$ for $L$-smooth functions.
+
+\subsection{Theorems and Contributions}
+- \textbf{Gradient method convergence} (Cauchy 1847): guarantees descent if step size chosen properly.  
+- \textbf{Convex optimization theory} (Rockafellar 1970): provided formal framework used in ML training guarantees.
+
+---
+
+\section{Min-Max Optimization}
+\subsection{Introduction}
+Problems where one agent minimizes while another maximizes.
+
+\subsection{Why Needed}
+GANs are precisely a min-max optimization: generator vs discriminator.
+
+\subsection{Details}
+\[
+\min_G \max_D L(G,D).
+\]
+A saddle point $(G^*, D^*)$ is a Nash equilibrium.
+
+\subsection{Theorems and Contributions}
+- \textbf{von Neumann’s Minimax Theorem} (1928): in zero-sum games, $\min \max = \max \min$.  
+GANs inherit this game-theoretic foundation.
+
+---
+
+\chapter{Stochastic Processes and Diffusion}
+(Expanded with Brownian motion, Itô calculus, Fokker–Planck — same structure: intro, why, math, theorems.)
+
+---
+
+\chapter{Generative Models}
+\section{Variational Autoencoders}
+(ELBO derivation, Kingma \& Welling 2013; reparam trick)
+
+\section{GANs}
+(Goodfellow 2014; adversarial game; Jensen–Shannon divergence link)
+
+\section{Diffusion Models}
+(Sohl-Dickstein 2015; Ho et al. 2020; forward noising, reverse denoising)
+
+\section{Energy-Based Models}
+(Lecun 2006; Boltzmann machines; contrastive divergence, Hinton 2002)
+
+---
+
+\chapter{Further Concepts}
+- Normalizing Flows (Rezende \& Mohamed, 2015)  
+- Score Matching (Hyvärinen, 2005)  
+- Stein Variational Gradient Descent (Liu \& Wang, 2016)  
+- Connections to RL and physics  
+
+---
+
+\end{document}
+
