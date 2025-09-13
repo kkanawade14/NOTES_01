@@ -1,0 +1,74 @@
+\chapter{Stochastic Processes and Diffusion}\label{sec:sp}
+Stochastic processes model the evolution of random variables over time. Diffusion-based generative models rely heavily on concepts from Brownian motion and stochastic differential equations.
+
+\section{Overview of Stochastic Processes}
+A stochastic process $\{X_t\}_{t\ge0}$ is a collection of random variables indexed by time. Processes may be discrete- or continuous-time and can have state spaces ranging from finite sets to $\mathbb{R}^d$. Key properties include stationarity and memory. Understanding these notions prepares us for Markov models used in diffusion and autoregressive techniques.
+
+\section{Markov Chains}
+Discrete-time Markov chains satisfy $\mathbb{P}(X_{t+1}=j\mid X_t=i,\ldots)=P_{ij}$ where $P$ is a transition matrix with rows summing to one. The chain is \emph{irreducible} if every state communicates and \emph{aperiodic} if returns occur at irregular times. The stationary distribution $\pi$ solves $\pi^T P=\pi^T$. Markov chains model sampling procedures in MCMC and are discrete analogues of diffusion processes.
+
+\section{Brownian Motion}
+\subsection{Definition and Properties}
+\begin{definition}[Brownian Motion]
+A stochastic process $\{B_t\}_{t\ge0}$ is Brownian motion if $B_0=0$, it has independent increments, $B_{t+s}-B_s\sim\mathcal{N}(0,t)$, and paths are almost surely continuous.
+\end{definition}
+Brownian motion, first observed by Robert Brown (1827) and mathematically formalized by Wiener (1923), is the canonical continuous-time stochastic process.
+
+\subsection{Why Needed}
+Diffusion models construct forward processes by adding Gaussian noise resembling Brownian motion. Understanding its properties allows connection to partial differential equations that describe density evolution.
+
+\section{Itô Calculus}
+\subsection{Stochastic Integrals}
+For a stochastic process $X_t$ adapted to the filtration of $B_t$, the Itô integral is defined as the mean-square limit
+\begin{equation}
+\int_0^T X_t \, dB_t = \lim_{n\to\infty} \sum_{k=0}^{n-1} X_{t_k} (B_{t_{k+1}}-B_{t_k}).
+\end{equation}
+
+\subsection{Itô's Formula}
+\begin{theorem}[Itô's Formula \cite{ito1944}]
+If $X_t$ satisfies $dX_t=\mu(t,X_t)dt+\sigma(t,X_t)dB_t$ and $f\in C^{2}$, then
+\begin{equation}
+df(X_t) = \left(\frac{\partial f}{\partial t}+\mu\frac{\partial f}{\partial x}+\frac{1}{2}\sigma^2\frac{\partial^2 f}{\partial x^2}\right)dt + \sigma\frac{\partial f}{\partial x} dB_t.
+\end{equation}
+\end{theorem}
+Itô calculus is indispensable for deriving diffusion and score-based models.
+
+\section{Fokker--Planck Equation}
+Let $X_t$ satisfy the stochastic differential equation (SDE)
+\begin{equation}
+dX_t = f(X_t,t) dt + g(X_t,t) dB_t.
+\end{equation}
+The probability density $p(x,t)$ of $X_t$ solves the Fokker--Planck equation
+\begin{equation}
+\frac{\partial p}{\partial t} = -\nabla_x\cdot (f p) + \frac{1}{2}\nabla_x^2:(gg^T p),
+\end{equation}
+which describes how densities evolve over time. Diffusion models design $f$ and $g$ to allow tractable reverse-time sampling.
+
+\section{Ornstein--Uhlenbeck Process}
+The Ornstein--Uhlenbeck (OU) process satisfies
+\begin{equation}
+dX_t = -\gamma X_t dt + \sigma dB_t,
+\end{equation}
+and has stationary distribution $\mathcal{N}(0, \sigma^2/(2\gamma))$. OU dynamics model velocity in Langevin equations and appear in continuous-time auto-regressive priors.
+
+\section{Langevin Dynamics}
+Langevin dynamics describe sampling from $p(x)\propto e^{-U(x)}$ via
+\begin{equation}
+dX_t = -\nabla U(X_t) dt + \sqrt{2} dB_t.
+\end{equation}
+Discretizing yields the unadjusted Langevin algorithm used for MCMC in EBMs. Adding momentum produces Hamiltonian Monte Carlo.
+
+\section{Time Reversal of SDEs}
+For an SDE $dX_t=f(X_t,t)dt+g(t)dB_t$ with density $p_t$, Anderson \cite{anderson1982} showed the time-reversed process satisfies
+\begin{equation}
+dX_t = \left[f(X_t,t)-g^2(t)\nabla_x \log p_t(X_t)\right]dt + g(t) d\bar{B}_t,
+\end{equation}
+where $\bar{B}_t$ is backward Brownian motion. This result underpins diffusion model sampling.
+
+\section{Girsanov's Theorem}
+Girsanov \cite{girsanov1960} provides a change-of-measure formula: if $X_t$ satisfies $dX_t = f dt + g dB_t$ and $u_t$ is adapted with $\int_0^T \|u_t\|^2 dt < \infty$, then under the new measure defined by
+\begin{equation}
+\frac{d\mathbb{Q}}{d\mathbb{P}} = \exp\left(\int_0^T u_t^T dB_t - \frac12\int_0^T \|u_t\|^2 dt\right),
+\end{equation}
+the process $\tilde{B}_t = B_t - \int_0^t u_s ds$ is Brownian. Girsanov's theorem allows incorporating drift changes and is used in score-based diffusion analyses.
+

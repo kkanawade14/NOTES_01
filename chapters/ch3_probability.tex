@@ -1,0 +1,115 @@
+\chapter{Probability and Statistics Foundations}\label{sec:prob}
+Probabilistic modeling underpins generative approaches by describing uncertainty and variability in data and latent variables.
+
+\section{Random Variables and Distributions}
+\subsection{Introduction}
+A \emph{random variable} $X$ on a probability space $(\Omega,\mathcal{F},\mathbb{P})$ is a measurable function $X:\Omega\to\mathbb{R}$ assigning numerical values to outcomes of an experiment.
+
+\subsection{Why Needed}
+VAEs assume latent variables $z$ with Gaussian priors; GANs generate samples from latent distributions; diffusion models explicitly define forward stochastic processes and require understanding of conditional distributions and Markov chains.
+
+\subsection{Details}
+A discrete random variable has a probability mass function (PMF) $P(X=x)$ with $\sum_x P(X=x)=1$. A continuous random variable has a probability density function (PDF) $p(x)$ such that $\int_{\mathbb{R}} p(x)\,dx=1$.
+
+The expectation of a function $g$ under $p$ is $\mathbb{E}[g(X)]=\int g(x)p(x)\,dx$. The variance is $\operatorname{Var}(X)=\mathbb{E}[(X-\mu)^2]$, where $\mu=\mathbb{E}[X]$.
+
+Two random variables $X$ and $Y$ are \emph{independent} if $p_{XY}(x,y)=p_X(x)p_Y(y)$ for all $(x,y)$. Independence often simplifies modeling and allows factorization of joint distributions.
+
+\subsection{Theorems and Contributions}
+\begin{theorem}[Law of Large Numbers \cite{bernoulli1713}]
+Let $\{X_i\}$ be i.i.d. with mean $\mu$. Then the sample mean $\bar{X}_n=\frac1n\sum_{i=1}^n X_i$ satisfies $\bar{X}_n\to\mu$ almost surely as $n\to\infty$.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+Apply Kolmogorov's strong law for i.i.d. variables with finite variance.
+\end{proof}
+
+\begin{theorem}[Central Limit Theorem \cite{laplace1812,lyapunov1901}]
+Let $\{X_i\}$ be i.i.d. with mean $\mu$ and variance $\sigma^2<\infty$. Then
+\begin{equation}
+\frac{\sum_{i=1}^n X_i - n\mu}{\sigma\sqrt{n}} \xrightarrow{d} \mathcal{N}(0,1).
+\end{equation}
+\end{theorem}
+This explains the prevalence of Gaussian assumptions in generative modeling.
+
+\section{Information Theory}
+\subsection{Introduction}
+Information theory quantifies uncertainty and divergence between distributions. It was initiated by Shannon in 1948 and underlies loss functions used in generative modeling.
+
+\subsection{Why Needed}
+VAEs employ Kullback--Leibler (KL) divergence in the Evidence Lower Bound (ELBO). GANs can be interpreted via Jensen--Shannon divergence. Diffusion models rely on score functions linked to Fisher information.
+
+\subsection{Details}
+\begin{definition}[Entropy]
+For a discrete random variable $X$ with PMF $p(x)$, the Shannon entropy is
+\begin{equation}
+H(X) = -\sum_x p(x)\log p(x).
+\end{equation}
+\end{definition}
+
+For continuous $X$, the differential entropy is $h(X)=-\int p(x)\log p(x)\,dx$. The cross-entropy between $p$ and $q$ is $H(p,q)=-\int p(x)\log q(x)\,dx$.
+
+\begin{definition}[Kullback--Leibler Divergence \cite{kullback1951}]
+The KL divergence from $p$ to $q$ is
+\begin{equation}
+D_{\mathrm{KL}}(p\|q) = \int p(x) \log \frac{p(x)}{q(x)}\, dx.
+\end{equation}
+\end{definition}
+KL divergence is nonnegative and equals zero if and only if $p=q$ almost everywhere.
+
+Mutual information between random variables $X$ and $Y$ is
+\begin{equation}
+I(X;Y)=D_{\mathrm{KL}}(p_{XY}\|p_X p_Y)=H(X)+H(Y)-H(X,Y),
+\end{equation}
+measuring the reduction in uncertainty of one variable given the other.
+
+\subsection{Theorems and Contributions}
+\begin{theorem}[Gibbs' Inequality \cite{gibbs1873,shannon1948}]
+For distributions $p$ and $q$, $D_{\mathrm{KL}}(p\|q)\ge0$ with equality iff $p=q$ a.e.
+\end{theorem}
+\begin{proof}
+Apply Jensen's inequality to the convex function $\phi(t)=t\log t$.
+\end{proof}
+
+\begin{theorem}[Jensen's Inequality \cite{jensen1906}]
+For a convex function $f$ and random variable $X$, $f(\mathbb{E}[X])\le\mathbb{E}[f(X)]$.
+\end{theorem}
+This inequality is the basis for deriving the ELBO in variational inference.
+
+\section{Bayes' Theorem and Conditional Expectation}
+Bayes (1763) showed how to invert conditional probabilities:
+\begin{equation}
+\mathbb{P}(A\mid B)=\frac{\mathbb{P}(B\mid A)\mathbb{P}(A)}{\mathbb{P}(B)}.
+\end{equation}
+In terms of densities, $p(x\mid y)=p(y\mid x)p(x)/p(y)$. The conditional expectation of $X$ given a $\sigma$-algebra $\mathcal{G}$ is the unique $\mathcal{G}$-measurable random variable $\mathbb{E}[X\mid\mathcal{G}]$ satisfying $\int_G \mathbb{E}[X\mid\mathcal{G}]\, d\mathbb{P}=\int_G X\, d\mathbb{P}$ for all $G\in\mathcal{G}$. Conditional expectations generalize least-squares projections and appear in VAEs when computing expectations over latent variables.
+
+\section{Covariance and Independence}
+For random variables $X$ and $Y$, the covariance is
+\begin{equation}
+\operatorname{Cov}(X,Y)=\mathbb{E}[(X-\mathbb{E}[X])(Y-\mathbb{E}[Y])].
+\end{equation}
+If $X$ and $Y$ are independent then $\operatorname{Cov}(X,Y)=0$, but the converse need not hold. Uncorrelated Gaussian variables are independent, a property exploited in the diagonal Gaussian priors of VAEs.
+
+\section{Parameter Estimation: MLE and MAP}
+Given data $x_1,\dots,x_n$ drawn i.i.d. from $p(x\mid\theta)$, the maximum likelihood estimator (MLE) solves
+\begin{equation}
+\hat{\theta}_{\mathrm{MLE}}=\arg\max_{\theta} \prod_{i=1}^n p(x_i\mid\theta).
+\end{equation}
+With a prior $p(\theta)$, the maximum a posteriori (MAP) estimator is
+\begin{equation}
+\hat{\theta}_{\mathrm{MAP}}=\arg\max_{\theta} p(\theta\mid x_{1:n})=\arg\max_{\theta} p(\theta)\prod_{i=1}^n p(x_i\mid\theta).
+\end{equation}
+MLE and MAP provide point estimates used to initialize parameters in generative models.
+
+\section{Bayesian Inference}
+Bayesian inference updates beliefs through the posterior $p(\theta\mid x)=\frac{p(x\mid\theta)p(\theta)}{p(x)}$. Predictions marginalize over parameters: $p(x_{\text{new}}\mid x)=\int p(x_{\text{new}}\mid\theta)p(\theta\mid x)\, d\theta$. Variational inference approximates the posterior by a tractable family, leading to the ELBO optimized by VAEs.
+
+\section{Concentration Inequalities}
+Concentration bounds quantify deviations of random variables from their expectations. For independent bounded $X_i\in[a,b]$, Hoeffding (1963) proved
+\begin{equation}
+\mathbb{P}\left(\frac1n\sum_{i=1}^n X_i-\mathbb{E}[X_i]\ge t\right)\le\exp\left(-\frac{2n t^2}{(b-a)^2}\right).
+\end{equation}
+Such results justify generalization guarantees and the design of learning rates in stochastic optimization.
+
+\section{Monte Carlo Methods and MCMC}
+Monte Carlo integration approximates expectations via samples: $\mathbb{E}[f(X)]\approx\frac1N\sum_{i=1}^N f(x_i)$. When direct sampling is hard, Markov Chain Monte Carlo (MCMC) constructs a Markov chain with stationary distribution $p$. The Metropolis--Hastings algorithm proposes $x'\sim q(x'\mid x)$ and accepts with probability $\alpha=\min\{1, \frac{p(x')q(x\mid x')}{p(x)q(x'\mid x)}\}$. MCMC underlies training of EBMs where sampling from $p_\theta$ is required.
+

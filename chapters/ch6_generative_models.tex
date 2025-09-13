@@ -1,0 +1,181 @@
+\chapter{Generative Models}\label{sec:gen}
+We now study key generative architectures, emphasizing intuition, mathematics, and algorithms.
+
+\section{Variational Autoencoders}
+\subsection{Introduction and Motivation}
+Variational Autoencoders (VAEs), introduced by Kingma and Welling (2013), combine deep learning with variational inference to learn latent-variable models. VAEs maximize a lower bound on the log-likelihood of data.
+
+\subsection{Mathematical Foundations}
+Given data $x\sim p_\text{data}(x)$, assume a latent variable $z$ with prior $p(z)$. The generative model is $p_\theta(x|z)$ parameterized by neural networks. Exact posterior inference $p_\theta(z|x)$ is intractable; VAEs introduce an approximate posterior $q_\phi(z|x)$.
+
+\subsection{ELBO Derivation}
+Starting from $\log p_\theta(x)=\log \int p_\theta(x,z)\, dz$ and introducing $q_\phi(z|x)$, we have
+\begin{align}
+\log p_\theta(x) &= \log \int q_\phi(z|x) \frac{p_\theta(x,z)}{q_\phi(z|x)} dz \\ 
+&\ge \int q_\phi(z|x) \log \frac{p_\theta(x,z)}{q_\phi(z|x)} dz = \mathbb{E}_{q_\phi}[\log p_\theta(x|z)] - D_{\mathrm{KL}}(q_\phi(z|x)\|p(z)),
+\end{align}
+where Jensen's inequality yields the lower bound. The gap equals $D_{\mathrm{KL}}(q_\phi(z|x)\|p_\theta(z|x))$. Thus we obtain the Evidence Lower Bound (ELBO).
+
+\begin{theorem}[Evidence Lower Bound]
+For any $q_\phi(z|x)$,
+\begin{align}
+\log p_\theta(x) &= D_{\mathrm{KL}}(q_\phi(z|x)\|p_\theta(z|x)) + \mathbb{E}_{q_\phi} [\log p_\theta(x,z) - \log q_\phi(z|x)] \\
+&\ge \mathbb{E}_{q_\phi} [\log p_\theta(x|z)] - D_{\mathrm{KL}}(q_\phi(z|x)\|p(z)) =: \mathcal{L}_{\text{ELBO}}(\theta,\phi).
+\end{align}
+\end{theorem}
+\begin{proof}
+Rearrange the definition of KL divergence $D_{\mathrm{KL}}(q\|p)\ge0$.
+\end{proof}
+
+To optimize the ELBO, one samples $z$ from $q_\phi(z|x)$ using the \emph{reparameterization trick}: for $q_\phi(z|x)=\mathcal{N}(\mu_\phi(x),\Sigma_\phi(x))$, write $z=\mu_\phi(x)+\Sigma_\phi^{1/2}(x)\epsilon$ with $\epsilon\sim\mathcal{N}(0,I)$.
+
+\begin{algorithm}
+\caption{VAE Training}
+\begin{algorithmic}[1]
+\FOR{each mini-batch $\{x_i\}$}
+    \STATE Sample $\epsilon_i\sim\mathcal{N}(0,I)$
+    \STATE Set $z_i=\mu_\phi(x_i)+\Sigma_\phi^{1/2}(x_i)\epsilon_i$
+    \STATE Compute loss $\mathcal{L}_{\text{ELBO}}$
+    \STATE Update $\theta,\phi$ via gradient ascent
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+VAEs provide principled density estimation with efficient inference but often produce blurry samples due to the Gaussian likelihood assumption. Research directions include richer posteriors, hierarchical VAEs, and combining VAEs with flows or diffusion models.
+
+\section{Generative Adversarial Networks}
+\subsection{Introduction and Motivation}
+Generative Adversarial Networks (GANs) were proposed by Goodfellow et al. (2014). A generator network $G$ maps latent noise $z\sim p(z)$ to data space, while a discriminator $D$ attempts to distinguish real samples from generated ones.
+
+\subsection{Mathematical Foundations}
+The classic GAN objective is
+\begin{equation}
+\min_G \max_D V(D,G) = \mathbb{E}_{x\sim p_{\text{data}}} [\log D(x)] + \mathbb{E}_{z\sim p(z)} [\log(1-D(G(z)))].
+\end{equation}
+
+\begin{theorem}[Optimal Discriminator \cite{goodfellow2014}]
+For fixed $G$, the optimal discriminator is $D^*(x)=\frac{p_{\text{data}}(x)}{p_{\text{data}}(x)+p_G(x)}$.
+\end{theorem}
+\begin{proof}
+Differentiate $V(D,G)$ with respect to $D(x)$ and set to zero.
+\end{proof}
+Substituting $D^*$ yields $V(D^*,G)= -\log 4 + 2\,\text{JS}(p_{\text{data}}\|p_G)$, showing GANs minimize Jensen--Shannon divergence.
+
+\subsection{Probability Metrics}
+Beyond Jensen--Shannon divergence, other distances compare distributions. The \emph{Wasserstein-1} distance \cite{villani2003} is
+\begin{equation}
+W_1(p,q)=\inf_{\gamma\in\Pi(p,q)} \int \|x-y\| d\gamma(x,y),
+\end{equation}
+where $\Pi(p,q)$ are couplings with marginals $p$ and $q$. Wasserstein GANs replace the JS divergence with $W_1$, yielding a smoother objective linked to optimal transport. Choice of metric affects training stability and sample quality.
+
+\subsection{Algorithm}
+\begin{algorithm}
+\caption{Stochastic GAN Training}
+\begin{algorithmic}[1]
+\FOR{each step}
+    \STATE Sample $\{x_i\}\sim p_{\text{data}}$, $\{z_i\}\sim p(z)$
+    \STATE Update discriminator by ascending $\nabla_D$ of objective
+    \STATE Update generator by descending $\nabla_G$ of objective
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+GANs generate sharp images but suffer from training instability and mode collapse. Research explores Wasserstein GANs, regularization, and alternative divergences. Understanding dynamics of adversarial optimization remains open.
+
+\section{Diffusion Models}
+\subsection{Introduction and Motivation}
+Diffusion models, beginning with Sohl-Dickstein et al. (2015) and popularized by Ho et al. (2020), generate samples by reversing a gradual noising process described by an SDE or Markov chain.
+
+\subsection{Mathematical Foundations}
+Consider a forward process $q(x_t|x_{t-1})=\mathcal{N}(\sqrt{1-\beta_t}x_{t-1},\beta_t I)$ adding Gaussian noise. As $t\to T$, $x_T$ approaches an isotropic Gaussian. The reverse process is parameterized by a neural network that predicts the score $\nabla_x \log q(x_t)$.
+
+Using results from score matching \cite{hyvarinen2005} and Fokker--Planck theory, the reverse SDE can be written as
+\begin{equation}
+dX_t = \left[f(X_t,t) - g^2(t)\nabla_x \log q_t(X_t)\right]dt + g(t)d\bar{B}_t,
+\end{equation}
+where $\bar{B}_t$ is Brownian motion run backward in time.
+
+\subsection{Probability Flow ODEs and Score Matching}
+The same marginal distributions arise from the deterministic probability flow ODE
+\begin{equation}
+\frac{dX_t}{dt}=f(X_t,t)-\tfrac12 g^2(t)\nabla_x \log q_t(X_t),
+\end{equation}
+which enables likelihood evaluation via the instantaneous change-of-variables formula. Score matching estimates $\nabla_x\log q_t$ without normalizing constants by minimizing $\mathbb{E}_{q_t}[\|s_\theta(x,t)-\nabla_x\log q_t(x)\|^2]$. These ideas connect diffusion models to normalizing flows and EBMs.
+
+\subsection{Algorithm (DDPM)}
+\begin{algorithm}
+\caption{Denoising Diffusion Probabilistic Model}
+\begin{algorithmic}[1]
+\FOR{$t=T,\dots,1$}
+    \STATE Predict noise $\epsilon_\theta(x_t,t)$
+    \STATE Compute mean $\mu_t=\frac{1}{\sqrt{1-\beta_t}}(x_t-\frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}}\epsilon_\theta)$
+    \STATE Sample $x_{t-1}\sim\mathcal{N}(\mu_t,\sigma_t^2 I)$
+\ENDFOR
+\RETURN $x_0$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+Diffusion models achieve state-of-the-art sample quality and likelihoods but are computationally expensive due to long sampling chains. Active research investigates faster samplers, theoretical understanding of score estimation, and connections to ODE-based flows.
+
+\section{Energy-Based Models}
+\subsection{Introduction and Motivation}
+Energy-Based Models (EBMs) assign an unnormalized energy $E_\theta(x)$ to each configuration $x$, defining $p_\theta(x)=Z^{-1}\exp(-E_\theta(x))$. Learning seeks low energy for data and high energy elsewhere. Early examples include the Boltzmann machine (Ackley et al., 1985).
+
+\subsection{Mathematical Foundations}
+The log-likelihood gradient is
+\begin{equation}
+\nabla_\theta \log p_\theta(x)= -\nabla_\theta E_\theta(x)+\mathbb{E}_{p_\theta}[\nabla_\theta E_\theta(X)].
+\end{equation}
+The partition function $Z=\int e^{-E_\theta(x)}dx$ is typically intractable, necessitating approximate methods like Markov Chain Monte Carlo (MCMC).
+
+\subsection{MCMC and Partition Functions}
+MCMC constructs a Markov chain with stationary distribution proportional to $e^{-E_\theta(x)}$. Algorithms such as Gibbs sampling and Langevin dynamics approximate expectations in the log-likelihood gradient. The intractable partition function cancels in ratio-based methods and its gradients can be estimated by importance sampling or annealed importance sampling. Efficient sampling is crucial for scaling EBMs to high dimensions.
+
+\subsection{Contrastive Divergence}
+Hinton's contrastive divergence (2002) approximates the log-likelihood gradient using short-run MCMC chains.
+\begin{algorithm}
+\caption{Contrastive Divergence-$k$}
+\begin{algorithmic}[1]
+\FOR{each data point $x$}
+    \STATE Run $k$ steps of MCMC starting at $x$ to obtain $\tilde{x}$
+    \STATE Update $\theta$ by $\nabla_\theta E_\theta(x)-\nabla_\theta E_\theta(\tilde{x})$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Strengths, Limitations, and Open Questions}
+EBMs provide flexible energy shaping and can model complex dependencies but suffer from difficult normalization and sampling. Recent work explores score-based EBMs and connections to diffusion models.
+
+\section{Autoregressive Models}
+\subsection{Introduction and Motivation}
+Autoregressive models factorize densities as $p(x)=\prod_{i=1}^n p(x_i\mid x_{<i})$. Examples include PixelCNN and transformer-based language models.
+\subsection{Mathematical Details}
+Training maximizes the log-likelihood
+\begin{equation}
+\log p(x)=\sum_{i=1}^n \log p(x_i\mid x_{<i}),
+\end{equation}
+using teacher forcing to expose ground-truth prefixes. The chain rule ensures exact likelihoods and efficient sampling but limits parallel generation.
+\subsection{Connections}
+Autoregressive factorization links to normalizing flows through triangular Jacobians and forms the backbone of diffusion model parameterizations such as transformer-based denoisers.
+
+\section{Normalizing Flows}
+\subsection{Introduction and Motivation}
+Normalizing flows \cite{rezende2015} transform a simple base distribution $z\sim p_z$ into a complex $x$ via an invertible map $x=T_\theta(z)$.
+\subsection{Mathematical Foundations}
+The change-of-variables formula gives
+\begin{equation}
+\log p_\theta(x)=\log p_z(T_\theta^{-1}(x)) + \log\left|\det \frac{\partial T_\theta^{-1}}{\partial x}\right|.
+\end{equation}
+Flows enable exact likelihoods and efficient sampling when the Jacobian determinant is tractable, as in coupling layers (RealNVP) or autoregressive transforms (MADE). They connect to diffusion through continuous normalizing flows governed by probability flow ODEs.
+
+\section{Further Concepts}
+\begin{itemize}
+    \item \textbf{Normalizing Flows} \cite{rezende2015}: invertible transformations with tractable Jacobian determinants enabling exact likelihood evaluation.
+    \item \textbf{Score Matching} \cite{hyvarinen2005}: estimators based on matching gradients of log densities, foundational for diffusion models and EBMs.
+    \item \textbf{Stein Variational Gradient Descent} \cite{liu2016}: particle-based variational inference using Stein's identity.
+    \item \textbf{Connections to Reinforcement Learning and Physics}: generative models relate to control problems, statistical mechanics, and thermodynamics, offering a rich interdisciplinary research area.
+\end{itemize}
+

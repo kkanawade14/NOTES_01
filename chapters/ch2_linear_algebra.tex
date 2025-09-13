@@ -1,0 +1,76 @@
+\chapter{Linear Algebra Foundations}\label{sec:la}
+Linear algebra provides the language in which data and model parameters are represented. Understanding vector spaces, eigenvalues, and matrix factorization is essential for designing and analyzing generative models.
+
+\section{Vector Spaces and Norms}
+\subsection{Introduction}
+\begin{definition}[Vector Space]
+A \emph{vector space} $V$ over a field $\mathbb{F}$ is a set equipped with two operations, vector addition and scalar multiplication, satisfying the eight axioms of associativity, commutativity, existence of identity and inverses, and distributivity. Elements of $V$ are called \emph{vectors}.
+\end{definition}
+Vector spaces form the backbone of data representation in machine learning. Typical examples include $\mathbb{R}^n$, spaces of matrices, and function spaces such as $L^2([0,1])$.
+
+\subsection{Why Needed}
+Neural networks, embeddings, and covariance matrices all rely on linear algebra. For GANs and VAEs, data lives in high-dimensional vector spaces, and understanding subspaces and projections is essential for latent representations. Many optimization algorithms exploit linear structure to compute gradients and updates efficiently.
+
+\subsection{Details and Concepts}
+Let $V$ be a finite-dimensional vector space over $\mathbb{R}$ with basis $\{v_1,\dots,v_n\}$. Every $x\in V$ can be uniquely expressed as $x=\sum_{i=1}^n x_i v_i$. The \emph{dimension} of $V$ is $n$.
+
+\begin{definition}[Norm]
+A \emph{norm} on $V$ is a function $\|\cdot\|:V\to[0,\infty)$ such that for all $x,y\in V$ and $\alpha\in\mathbb{R}$:
+\begin{enumerate}
+    \item $\|x\|=0$ iff $x=0$,
+    \item $\|\alpha x\|=|\alpha|\,\|x\|$,
+    \item $\|x+y\|\le \|x\|+\|y\|$ (triangle inequality).
+\end{enumerate}
+\end{definition}
+Important norms on $\mathbb{R}^n$ include the $\ell_p$ norms
+\begin{equation}
+\|x\|_p = \left(\sum_{i=1}^n |x_i|^p\right)^{1/p},\qquad 1\le p<\infty,
+\end{equation}
+and the $\ell_\infty$ norm $\|x\|_\infty=\max_i|x_i|$. Norms induce metrics and topologies, providing notions of distance and convergence essential for analyzing algorithms.
+
+\subsection{Theorems and Contributions}
+\begin{theorem}[Cauchy--Schwarz Inequality \cite{cauchy1821,schwarz1888}]
+For any $x,y\in\mathbb{R}^n$,
+\begin{equation}
+|\langle x,y\rangle|\le \|x\|_2\,\|y\|_2.
+\end{equation}
+\end{theorem}
+\begin{proof}
+Consider the nonnegative quadratic $q(t)=\|x-ty\|_2^2=\langle x-ty,x-ty\rangle$. Expanding yields $q(t)=\|x\|_2^2-2t\langle x,y\rangle+t^2\|y\|_2^2$. The discriminant must be nonpositive, giving $4\langle x,y\rangle^2-4\|x\|_2^2\|y\|_2^2\le0$.
+\end{proof}
+This inequality underlies correlation measures and is crucial for bounding errors in machine learning algorithms. Equality holds if and only if $x$ and $y$ are linearly dependent.
+
+\section{Eigenvalues and Eigenvectors}
+\subsection{Introduction}
+Let $A\in\mathbb{R}^{n\times n}$. A nonzero vector $v\in\mathbb{R}^n$ is an \emph{eigenvector} of $A$ with associated \emph{eigenvalue} $\lambda$ if $Av=\lambda v$. Eigenvalues describe how linear transformations scale vectors, and eigenvectors describe invariant directions.
+
+\subsection{Why Needed}
+In VAEs, covariance matrices of Gaussian priors use eigen-decompositions. In GAN stability, eigenvalue analysis explains training oscillations. In diffusion modeling, spectral analysis governs smoothing operations and the behavior of Laplacians on graphs or continuous domains.
+
+\subsection{Mathematical Details}
+The eigenvalues of $A$ are roots of its characteristic polynomial $p_A(\lambda)=\det(A-\lambda I)$. For diagonalizable matrices we have the factorization $A=V\Lambda V^{-1}$, where $\Lambda$ is diagonal. If $A$ is symmetric, the following fundamental result applies.
+
+\begin{theorem}[Spectral Theorem \cite{hilbert1904}]
+If $A\in\mathbb{R}^{n\times n}$ is symmetric, then there exists an orthogonal matrix $Q$ and a diagonal matrix $\Lambda$ such that $A=Q\Lambda Q^T$. The diagonal entries of $\Lambda$ are the real eigenvalues of $A$, and the columns of $Q$ form an orthonormal basis of eigenvectors.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+By induction on $n$ and the fact that symmetric matrices have real eigenvalues, one constructs an orthonormal eigenbasis using Gram--Schmidt orthogonalization.
+\end{proof}
+Principal Component Analysis (Pearson, 1901) applies the spectral theorem to the covariance matrix $\Sigma=\tfrac1m\sum_{i=1}^m x_ix_i^T$, projecting data onto leading eigenvectors to reduce dimensionality.
+
+\section{Matrix Operations and Calculus}
+\subsection{Matrix Operations}
+Matrix addition and multiplication follow the usual rules $(A+B)_{ij}=A_{ij}+B_{ij}$ and $(AB)_{ij}=\sum_k A_{ik}B_{kj}$. The trace $\operatorname{tr}(A)=\sum_i A_{ii}$ is linear and satisfies $\operatorname{tr}(AB)=\operatorname{tr}(BA)$. The Frobenius norm $\|A\|_F=\sqrt{\sum_{ij}A_{ij}^2}$ extends the Euclidean norm and is useful for measuring reconstruction error in VAEs.
+
+\subsection{Singular Value Decomposition}
+\begin{theorem}[Singular Value Decomposition]
+Any $A\in\mathbb{R}^{m\times n}$ admits a factorization $A=U\Sigma V^T$ where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal and $\Sigma$ is diagonal with nonnegative entries $\sigma_1\ge\dots\ge\sigma_r>0$. The values $\sigma_i$ are the \emph{singular values} of $A$.
+\end{theorem}
+SVD underlies low-rank approximations and is central to matrix completion and dimensionality reduction.
+
+\subsection{Matrix Calculus for Backpropagation}
+Matrix derivatives obey rules analogous to scalar calculus. For $f(X)=\operatorname{tr}(AX^T)$ we have $\nabla_X f=A$. If $f(X)=\|AX-b\|_2^2$, then $\nabla_X f=2A^T(AX-b)$. These formulas enable backpropagation through linear layers and are generalized via the chain rule to deep networks.
+
+\subsection{Tensor Notation}
+Higher-order data such as images and video require tensors. A tensor $\mathcal{T}\in\mathbb{R}^{n_1\times\cdots\times n_k}$ has entries $\mathcal{T}_{i_1\dots i_k}$. Operations like contraction generalize matrix multiplication and appear in attention mechanisms and diffusion model score networks.
+
