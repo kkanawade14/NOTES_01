@@ -159,7 +159,46 @@ For a convex function $f$ and random variable $X$, $f(\mathbb{E}[X])\le\mathbb{E
 This inequality is the basis for deriving the ELBO in variational inference.
 
 \chapter{Optimization Foundations}
-Optimization provides algorithms for training generative models by minimizing or maximizing objective functions.
+Optimization provides algorithms for training generative models by minimizing or maximizing objective functions. We distinguish between deterministic algorithms, which use exact gradients, and stochastic algorithms that rely on noisy gradient estimates from data samples.
+
+\section{Motivation and Overview}
+Modern machine learning models often contain millions of parameters and are trained on massive datasets. Computing exact gradients of the empirical risk can be prohibitively expensive, motivating iterative methods that approximate these gradients with stochastic samples. Optimization theory provides guarantees about when such procedures converge and how quickly.
+
+\section{Optimization Preliminaries}
+\subsection{Convexity}
+\begin{definition}[Convex Function]
+A function $f: \mathbb{R}^n\to\mathbb{R}$ is \emph{convex} if for all $x,y$ and $\lambda\in[0,1]$,
+\begin{equation}
+f(\lambda x+(1-\lambda)y)\le \lambda f(x)+(1-\lambda)f(y).
+\end{equation}
+\end{definition}
+Convex problems enjoy the property that any local minimum is global. Many losses used in machine learning, such as logistic regression, are convex in their parameters.
+
+\subsection{Lipschitz Continuity and Smoothness}
+\begin{definition}[Lipschitz Gradient]
+We say $f$ has an $L$-Lipschitz gradient if
+\begin{equation}
+\|\nabla f(x)-\nabla f(y)\|_2\le L\|x-y\|_2 \qquad \forall x,y.
+\end{equation}
+\end{definition}
+When $f$ is twice differentiable this is equivalent to $\|\nabla^2 f(x)\|_2\le L$, giving a bound on curvature. Smoothness enables quadratic upper bounds that are central to convergence analysis.
+
+\subsection{Strong Convexity}
+\begin{definition}[Strong Convexity]
+A differentiable function $f$ is \emph{$\mu$-strongly convex} if
+\begin{equation}
+f(y)\ge f(x)+\langle\nabla f(x),y-x\rangle+\frac{\mu}{2}\|y-x\|_2^2 \qquad \forall x,y.
+\end{equation}
+\end{definition}
+Strong convexity implies the minimizer $x^*$ is unique and guarantees linear convergence of many algorithms.
+
+\subsection{Basic Convergence Result}
+\begin{theorem}
+If $f$ is convex and differentiable with an $L$-Lipschitz gradient, any point with $\nabla f(x)=0$ is a global minimizer of $f$.
+\end{theorem}
+\begin{proof}
+By convexity, $f(y)\ge f(x)+\langle\nabla f(x),y-x\rangle$ for all $y$. Setting $\nabla f(x)=0$ yields $f(y)\ge f(x)$.
+\end{proof}
 
 \section{Gradient Descent}
 \subsection{Introduction}
@@ -195,6 +234,96 @@ where $x^*$ is a minimizer of $f$.
 \begin{proof}[Proof Sketch]
 Convexity implies $f(x_{k+1})\le f(x_k)+\langle\nabla f(x_k),x_{k+1}-x_k\rangle+\tfrac{L}{2}\|x_{k+1}-x_k\|^2$. Substituting the update and telescoping yields the bound.
 \end{proof}
+
+\section{Newton's Method}
+\subsection{Introduction}
+Newton's method uses second-order curvature information to achieve quadratic local convergence.
+\subsection{Details}
+Expanding $f$ around $x_k$ using a second-order Taylor series and minimizing the quadratic model yields the update
+\begin{equation}
+x_{k+1}=x_k-\left[\nabla^2 f(x_k)\right]^{-1}\nabla f(x_k).
+\end{equation}
+\subsection{Remarks}
+Newton's method can be expensive in high dimensions due to the Hessian inverse, but forms the basis of quasi-Newton methods such as BFGS.
+
+\section{Coordinate Descent}
+\subsection{Introduction}
+Coordinate descent optimizes one coordinate at a time while keeping others fixed.
+\subsection{Update Rule}
+For differentiable $f$, the $i$-th coordinate is updated by
+\begin{equation}
+x_{k+1}^{(i)} = x_k^{(i)} - \eta \frac{\partial f}{\partial x_i}(x_k),
+\end{equation}
+cycling through coordinates or selecting them randomly. This method is effective when gradient computations are cheaper coordinate-wise.
+
+\section{Stochastic Optimization}
+\subsection{Stochastic Gradient Descent}
+\subsubsection{Derivation}
+Let the empirical risk be $F(x)=\frac{1}{N}\sum_{i=1}^N f_i(x)$. Computing $\nabla F$ exactly requires a pass over the dataset. Instead, sample an index $i_k$ and form an unbiased estimator $g_k=\nabla f_{i_k}(x_k)$ so that $\mathbb{E}[g_k]=\nabla F(x_k)$. The update becomes
+\begin{equation}
+x_{k+1}=x_k-\eta_k g_k.
+\end{equation}
+
+\begin{algorithm}
+\caption{Stochastic Gradient Descent}
+\begin{algorithmic}[1]
+\STATE Initialize $x_0$
+\FOR{$k=0,1,2,\dots$}
+    \STATE Sample $i_k$ and compute $g_k = \nabla f_{i_k}(x_k)$
+    \STATE $x_{k+1}=x_k-\eta_k g_k$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}[Robbins--Monro Convergence \cite{robbins1951}]
+Assume $F$ is convex with $L$-Lipschitz gradient and that $\mathbb{E}[\|g_k-\nabla F(x_k)\|_2^2]\le\sigma^2$. If step sizes satisfy $\sum_k \eta_k=\infty$ and $\sum_k \eta_k^2<\infty$, then $x_k\to x^*$ almost surely, where $x^*$ minimizes $F$.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+The updates form a stochastic approximation. Applying the Robbins--Siegmund lemma to the expected squared distance $\mathbb{E}[\|x_k-x^*\|^2]$ establishes almost sure convergence.
+\end{proof}
+
+\subsubsection{Mini-Batch SGD}
+Rather than a single example, mini-batch SGD averages gradients over a small batch $B_k$, reducing variance:
+\begin{equation}
+g_k = \frac{1}{|B_k|}\sum_{i\in B_k} \nabla f_i(x_k).
+\end{equation}
+
+\subsubsection{Momentum \cite{polyak1964}}
+Momentum accumulates a velocity term $v_{k+1}=\beta v_k + g_k$, leading to the update $x_{k+1}=x_k-\eta v_{k+1}$. This dampens oscillations and accelerates convergence.
+
+\subsubsection{Nesterov's Accelerated Gradient \cite{nesterov1983}}
+Nesterov proposed looking ahead by evaluating the gradient at $x_k-\beta v_k$, yielding improved convergence rates for smooth convex functions.
+
+\subsubsection{AdaGrad \cite{duchi2011}}
+AdaGrad adapts learning rates per coordinate using the accumulated squared gradients $G_k$, updating
+\begin{equation}
+x_{k+1}=x_k-\eta G_k^{-1/2} g_k.
+\end{equation}
+This method is well suited for sparse data.
+
+\subsubsection{RMSProp \cite{tieleman2012}}
+RMSProp maintains an exponential moving average of squared gradients $s_{k+1}=\rho s_k+(1-\rho)g_k^2$ and scales the update by $1/\sqrt{s_{k+1}+\epsilon}$, mitigating AdaGrad's aggressively decaying rates.
+
+\subsubsection{Adam \cite{kingma2015}}
+Adam combines momentum and RMSProp-style adaptive scaling.
+
+\begin{algorithm}
+\caption{Adam}
+\begin{algorithmic}[1]
+\STATE Initialize $x_0$, $m_0=0$, $v_0=0$
+\FOR{$k=0,1,2,\dots$}
+    \STATE Sample $i_k$ and compute $g_k=\nabla f_{i_k}(x_k)$
+    \STATE $m_{k+1}=\beta_1 m_k + (1-\beta_1)g_k$
+    \STATE $v_{k+1}=\beta_2 v_k + (1-\beta_2)g_k^2$
+    \STATE $\hat{m}_{k+1}=m_{k+1}/(1-\beta_1^{k+1})$
+    \STATE $\hat{v}_{k+1}=v_{k+1}/(1-\beta_2^{k+1})$
+    \STATE $x_{k+1}=x_k-\eta\,\hat{m}_{k+1}/(\sqrt{\hat{v}_{k+1}}+\epsilon)$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Convergence and Trade-offs}
+Stochastic methods trade per-iteration accuracy for computational efficiency. Mini-batching reduces gradient variance, while momentum and adaptive methods accelerate training but may sacrifice theoretical guarantees. In practice, careful tuning of learning rates and batch sizes is essential.
 
 \section{Min--Max Optimization}
 \subsection{Introduction}
@@ -431,6 +560,12 @@ EBMs provide flexible energy shaping and can model complex dependencies but suff
 \bibitem{ho2020} J. Ho et al. "Denoising diffusion probabilistic models", 2020.
 \bibitem{rezende2015} D. J. Rezende and S. Mohamed. "Variational inference with normalizing flows", 2015.
 \bibitem{liu2016} Q. Liu and D. Wang. "Stein variational gradient descent", 2016.
+\bibitem{robbins1951} H. Robbins and S. Monro. "A stochastic approximation method", \emph{Ann. Math. Statist.}, 1951.
+\bibitem{polyak1964} B. T. Polyak. "Some methods of speeding up the convergence of iteration methods", \emph{USSR Comput. Math. Math. Phys.}, 1964.
+\bibitem{nesterov1983} Y. Nesterov. "A method for unconstrained convex minimization problem with the rate of convergence $O(1/k^2)$", \emph{Dokl. Akad. Nauk SSSR}, 1983.
+\bibitem{duchi2011} J. Duchi, E. Hazan, and Y. Singer. "Adaptive subgradient methods for online learning and stochastic optimization", \emph{JMLR}, 2011.
+\bibitem{tieleman2012} T. Tieleman and G. Hinton. "Lecture 6.5 -- RMSProp: Divide the gradient by a running average of its recent magnitude", COURSERA: Neural Networks for Machine Learning, 2012.
+\bibitem{kingma2015} D. P. Kingma and J. Ba. "Adam: A method for stochastic optimization", 2015.
 \end{thebibliography}
 
 \end{document}
